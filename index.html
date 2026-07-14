@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>撮影ガイド</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,sans-serif;background:#0a0a0a;color:#fff}
+/* 全画面共通: fixed で body の overflow に依存しない */
+#setup,#scanner,#uploading,#timeInput,#score,#admin,#adminDetail,#result{display:none;position:fixed;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;flex-direction:column;align-items:stretch;padding:1.2rem;padding-top:max(env(safe-area-inset-top),1.2rem);padding-bottom:calc(env(safe-area-inset-bottom)+1.5rem);gap:0.75rem}
+button{font-family:inherit}
+
+/* ===== セットアップ画面 ===== */
+#setup{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;padding:2rem;gap:1rem}
+#setup h1{font-size:22px;font-weight:700;letter-spacing:-0.3px}
+#setup .desc{font-size:14px;color:#aaa;text-align:center;line-height:1.6;max-width:340px}
+.field{width:100%;max-width:340px;display:flex;flex-direction:column;gap:5px}
+.field label{font-size:12px;color:#777;text-transform:uppercase;letter-spacing:0.5px}
+.field input{width:100%;padding:12px 16px;border-radius:12px;border:1px solid #333;background:#1a1a1a;color:#fff;font-size:15px;outline:none;text-align:center}
+.field input:focus{border-color:#34c759}
+#connStatus{font-size:12px;padding:5px 14px;border-radius:20px;text-align:center}
+#connStatus.ok{background:#122e12;color:#34c759}
+#connStatus.ng{background:#2e1212;color:#ff6b6b}
+#connStatus.wait{background:#2e2a12;color:#f5a623}
+#sideToggle{display:flex;gap:8px;width:100%;max-width:340px}
+.side-btn{flex:1;padding:11px;border-radius:11px;background:#1c1c1e;border:1px solid #333;color:#888;font-size:15px;cursor:pointer}
+.side-btn.active{background:#0a2c1a;border-color:#34c759;color:#34c759;font-weight:600}
+#startBtn{width:100%;max-width:340px;padding:15px;border-radius:14px;background:#34c759;color:#fff;font-size:16px;font-weight:600;border:none;cursor:pointer;transition:opacity 0.15s}
+#startBtn:active{opacity:0.7}
+#startBtn:disabled{background:#333;color:#666}
+
+/* ===== スキャナー画面 ===== */
+#scanner{display:none;position:fixed;inset:0;flex-direction:column}
+#viewfinder{position:relative;flex:1;overflow:hidden;background:#000}
+#video{width:100%;height:100%;object-fit:cover}
+#canvas{display:none}
+
+/* ガイド枠（横長長方形：模擬臓器の実測縦横比 1.35 に合わせる） */
+#guideOval{position:absolute;top:50%;left:50%;transform:translate(-50%,-52%);width:86%;aspect-ratio:1.35;border-radius:10px;border:2.5px solid #34c759;transition:border-color 0.3s;pointer-events:none}
+#guideOval.ng{border-color:#ff3b30}
+
+/* コーナーマーク */
+.co{position:absolute;width:22px;height:22px;pointer-events:none}
+.co.tl{top:-2px;left:-2px;border-top:3px solid;border-left:3px solid;border-color:inherit}
+.co.tr{top:-2px;right:-2px;border-top:3px solid;border-right:3px solid;border-color:inherit}
+.co.bl{bottom:-2px;left:-2px;border-bottom:3px solid;border-left:3px solid;border-color:inherit}
+.co.br{bottom:-2px;right:-2px;border-bottom:3px solid;border-right:3px solid;border-color:inherit}
+
+/* 十字線 */
+#crossH,#crossV{position:absolute;background:rgba(255,255,255,0.15);pointer-events:none}
+#crossH{width:40px;height:1px;top:50%;left:50%;transform:translate(-50%,-50%)}
+#crossV{width:1px;height:40px;top:50%;left:50%;transform:translate(-50%,-50%)}
+
+/* チェックリスト */
+#checks{position:absolute;top:max(env(safe-area-inset-top),10px);left:10px;right:10px;display:flex;flex-direction:column;gap:4px;z-index:2}
+.ck{display:flex;align-items:center;gap:8px;background:rgba(0,0,0,0.6);border-radius:8px;padding:6px 10px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.ck-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.ck-dot.ok{background:#34c759}
+.ck-dot.ng{background:#ff3b30}
+.ck-msg{font-size:13px;font-weight:500}
+
+/* 被験者ID表示 */
+#subjectBadge{position:absolute;top:max(env(safe-area-inset-top),10px);right:10px;background:rgba(0,0,0,0.6);border-radius:8px;padding:5px 10px;font-size:12px;color:#34c759;font-weight:600;z-index:2;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+
+/* 安定バー */
+#stabWrap{position:absolute;bottom:100px;left:16px;right:16px;z-index:2}
+#stabLabel{font-size:12px;color:rgba(255,255,255,0.7);margin-bottom:5px;text-align:center}
+#stabTrack{height:5px;background:rgba(255,255,255,0.12);border-radius:3px;overflow:hidden}
+#stabFill{height:100%;width:0%;background:#34c759;border-radius:3px;transition:width 0.15s}
+
+/* 撮影ボタン */
+#captureBtn{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);width:70px;height:70px;border-radius:50%;background:rgba(255,255,255,0.95);border:4px solid rgba(255,255,255,0.3);cursor:pointer;z-index:3;transition:transform 0.1s,background 0.2s;display:flex;align-items:center;justify-content:center}
+#captureBtn:active{transform:translateX(-50%) scale(0.9)}
+#captureBtn.off{background:rgba(80,80,80,0.6);border-color:rgba(80,80,80,0.3);pointer-events:none}
+#captureInner{width:54px;height:54px;border-radius:50%;background:#fff;transition:background 0.2s}
+#captureBtn.off #captureInner{background:#444}
+
+/* ===== アップロード画面 ===== */
+#uploading{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:20;flex-direction:column;align-items:center;justify-content:center;gap:1rem}
+.spinner{width:38px;height:38px;border:3px solid #333;border-top-color:#34c759;border-radius:50%;animation:spin 0.7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ===== 結果画面 ===== */
+#result{display:none;flex-direction:column;min-height:100dvh;padding:1.5rem;padding-top:max(env(safe-area-inset-top),1.5rem);gap:1rem;overflow-y:auto;padding-bottom:calc(env(safe-area-inset-bottom) + 1.5rem)}
+#result h2{font-size:18px;font-weight:600}
+.ok-box{background:#122c12;border:1px solid #1e5c1e;border-radius:14px;padding:20px;font-size:15px;line-height:1.8;color:#80ff80;text-align:center}
+.ok-box strong{font-size:14px;color:#bbb;display:block;margin-top:6px;word-break:break-all}
+.err-box{background:#2c1212;border:1px solid #5c2020;border-radius:14px;padding:16px;font-size:14px;line-height:1.7;color:#ff8080}
+.shot-count{text-align:center;font-size:13px;color:#888;margin-top:-4px}
+#retakeBtn{width:100%;padding:15px;border-radius:14px;background:#1c1c1e;color:#fff;font-size:16px;font-weight:500;border:1px solid #333;cursor:pointer;flex-shrink:0}
+#retakeBtn:active{opacity:0.7}
+
+/* ===== 時間入力画面 ===== */
+#timeInput{align-items:center;justify-content:center}
+#timeInput h2{font-size:20px;font-weight:600}
+#timeInput .sub{font-size:13px;color:#888;text-align:center;margin-top:-6px}
+#dialWrap{display:flex;align-items:center;gap:14px;margin:1.2rem 0}
+.dial{display:flex;flex-direction:column;align-items:center;gap:8px}
+.dial-label{font-size:12px;color:#888}
+.dial button{width:74px;height:52px;border-radius:14px;background:#1c1c1e;border:1px solid #333;color:#34c759;font-size:26px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.dial button:active{background:#2c2c2e}
+.dial-val{font-size:46px;font-weight:700;font-variant-numeric:tabular-nums;min-width:74px;text-align:center}
+.dial-colon{font-size:40px;font-weight:700;color:#555;padding-top:22px}
+#timeHint{font-size:13px;color:#888;margin-bottom:0.6rem}
+#timeHint.over{color:#ff9f0a}
+#timeOkBtn{width:100%;max-width:420px;padding:16px;border-radius:14px;background:#34c759;color:#000;font-size:17px;font-weight:600;border:none;cursor:pointer}
+#timeOkBtn:active{opacity:0.75}
+#timeoutBtn{width:100%;max-width:420px;padding:15px;border-radius:14px;background:#2c1a1a;color:#ff9f0a;font-size:15px;font-weight:500;border:1px solid #5c3a20;cursor:pointer}
+#timeoutBtn:active{opacity:0.75}
+
+/* ===== 採点結果画面 ===== */
+/* #score は共通スタイルで定義済み */
+#scoreWait{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;flex:1}
+#scoreWait .sub{font-size:13px;color:#888;text-align:center}
+#scoreBody{display:flex;flex-direction:column;gap:0.75rem}
+#scoreBody>*{margin-bottom:0}
+#scoreTop{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:0.3rem}
+#gradeBadge{font-size:15px;font-weight:700;padding:6px 14px;border-radius:999px;background:#1c1c1e;border:1px solid #333;white-space:nowrap}
+#gradeBadge.s{background:#3a2f0a;border-color:#8a6d1a;color:#ffd60a}
+#gradeBadge.a{background:#0a2c1a;border-color:#1e6c3a;color:#34c759}
+#gradeBadge.b{background:#0a1f33;border-color:#1e4a6c;color:#5ac8fa}
+#gradeBadge.c{background:#33260a;border-color:#6c541e;color:#ff9f0a}
+#gradeBadge.d{background:#331414;border-color:#6c2020;color:#ff453a}
+#totalScore{font-size:48px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+#totalScore .max{font-size:20px;font-weight:500;color:#666}
+#scoreCap{font-size:11px;color:#666;line-height:1.5}
+#radarImg{width:100%;border-radius:12px;background:#fff}
+#axisList{display:flex;flex-direction:column;gap:8px}
+.axis{background:#1c1c1e;border:1px solid #2c2c2e;border-radius:11px;padding:10px 12px}
+.axis.na{opacity:0.45}
+.axis-top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px}
+.axis-name{font-weight:500}
+.axis-pts{color:#888;font-variant-numeric:tabular-nums}
+.axis-bar{height:6px;background:#2c2c2e;border-radius:3px;overflow:hidden}
+.axis-fill{height:100%;background:#34c759;border-radius:3px;transition:width 0.5s}
+.axis-fill.low{background:#ff9f0a}
+.axis-fill.bad{background:#ff453a}
+/* 焦げ度合いの重度/中度/軽度インジケーター */
+.sev-bars{margin-top:8px;display:flex;flex-direction:column;gap:5px}
+.sev-row{display:flex;align-items:center;gap:8px}
+.sev-label{font-size:11px;color:#888;min-width:24px}
+.sev-track{flex:1;height:5px;background:#2c2c2e;border-radius:3px;overflow:hidden}
+.sev-fill{height:100%;border-radius:3px;transition:width 0.5s}
+.sev-fill.bad{background:#ff453a}
+.sev-fill.low{background:#ff9f0a}
+.sev-fill.good{background:#34c759}
+.sev-pct{font-size:11px;color:#888;min-width:32px;text-align:right;font-variant-numeric:tabular-nums}
+.btn-row{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.btn-row button{width:100%;min-height:52px;padding:15px;border-radius:13px;background:#1c1c1e;color:#fff;font-size:16px;font-weight:500;border:1px solid #333;cursor:pointer;display:block}
+.btn-row button.ghost{background:transparent;border-color:#444;color:#aaa}
+.btn-row button:active{opacity:0.7}
+
+/* ===== 管理者モード ===== */
+/* #admin は共通スタイルで定義済み */
+#admin h2{font-size:19px;font-weight:600}
+#adminTabs{display:flex;gap:8px}
+.tab{flex:1;padding:11px;border-radius:11px;background:#1c1c1e;border:1px solid #333;color:#888;font-size:14px;cursor:pointer}
+.tab.active{background:#34c759;color:#000;border-color:#34c759;font-weight:600}
+#adminList{display:flex;flex-direction:column;gap:8px;font-size:14px;color:#888;margin-bottom:0.8rem}
+.rec{display:flex;align-items:center;gap:12px;background:#1c1c1e;border:1px solid #2c2c2e;border-radius:12px;padding:12px 14px}
+.rec-rank{font-size:17px;font-weight:700;color:#666;min-width:30px;text-align:center;font-variant-numeric:tabular-nums}
+.rec-rank.top{color:#ffd60a}
+.rec-main{flex:1;min-width:0}
+.rec-id{font-size:15px;font-weight:600;color:#fff}
+.rec-meta{font-size:12px;color:#777;margin-top:2px}
+.rec-score{font-size:21px;font-weight:700;font-variant-numeric:tabular-nums;color:#34c759}
+.rec-grade{font-size:11px;color:#888;text-align:right;margin-top:2px}
+#admin>button{width:100%;min-height:52px;padding:15px;border-radius:13px;background:#1c1c1e;color:#fff;font-size:16px;font-weight:500;border:1px solid #333;cursor:pointer;display:block}
+#admin>button.secondary{background:transparent;border-color:#444;color:#aaa}
+#admin>button:active{opacity:0.7}
+#adminLink{text-align:center;font-size:13px;color:#666;text-decoration:underline;cursor:pointer;padding:8px}
+
+/* 管理者モード 詳細パネル（スコア画面と同じレイアウト） */
+#adminDetail{z-index:30;background:#0a0a0a}
+#adminDetail>*{margin-bottom:0.8rem}
+#detailHeader{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.detail-grade{font-size:15px;font-weight:700;padding:6px 14px;border-radius:999px;background:#1c1c1e;border:1px solid #333;white-space:nowrap}
+.detail-grade.s{background:#3a2f0a;border-color:#8a6d1a;color:#ffd60a}
+.detail-grade.a{background:#0a2c1a;border-color:#1e6c3a;color:#34c759}
+.detail-grade.b{background:#0a1f33;border-color:#1e4a6c;color:#5ac8fa}
+.detail-grade.c{background:#33260a;border-color:#6c541e;color:#ff9f0a}
+.detail-grade.d{background:#331414;border-color:#6c2020;color:#ff453a}
+#detailScore{font-size:48px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+#detailScore .max{font-size:18px;font-weight:500;color:#666}
+#detailCap{font-size:11px;color:#666;line-height:1.5}
+#adminDetail h3{font-size:15px;font-weight:600;color:#888}
+#adminDetail .close-btn{display:block;width:100%;padding:14px;border-radius:13px;background:#1c1c1e;border:1px solid #333;color:#fff;font-size:15px;cursor:pointer;text-align:center;margin-top:4px}
+#detailRadar{width:100%;border-radius:12px;background:#fff}
+#detailAxes{display:flex;flex-direction:column;gap:8px}
+</style>
+</head>
+<body>
+
+<!-- ========== セットアップ ========== -->
+<div id="setup">
+  <h1>撮影ガイド</h1>
+  <p class="desc">
+    模擬臓器をガイド枠に合わせて撮影すると、<br>
+    自動的にPCに転送されます。
+  </p>
+
+  <div class="field">
+    <label>Supabase URL</label>
+    <input id="inUrl" type="url" placeholder="https://xxxxx.supabase.co" autocomplete="off">
+  </div>
+  <div class="field">
+    <label>Publishable Key</label>
+    <input id="inKey" type="text" placeholder="sb_publishable_..." autocomplete="off">
+  </div>
+  <div class="field">
+    <label>被験者ID</label>
+    <input id="inSubject" type="text" placeholder="例: S001" value="S001" autocomplete="off">
+  </div>
+  <div class="field">
+    <label>切除した側</label>
+    <div id="sideToggle">
+      <button id="sideLeft"  class="side-btn active" onclick="setSide('left')">左（Left）</button>
+      <button id="sideRight" class="side-btn"        onclick="setSide('right')">右（Right）</button>
+    </div>
+  </div>
+
+  <div id="connStatus" class="ng">未接続</div>
+  <button id="startBtn" onclick="start()" disabled>カメラを起動</button>
+  <div id="adminLink" onclick="openAdmin()">採点結果の一覧を見る（管理者）</div>
+</div>
+
+<!-- ========== スキャナー ========== -->
+<div id="scanner">
+  <div id="viewfinder">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="canvas"></canvas>
+
+    <div id="guideOval" class="ng">
+      <div class="co tl"></div><div class="co tr"></div>
+      <div class="co bl"></div><div class="co br"></div>
+    </div>
+    <div id="crossH"></div>
+    <div id="crossV"></div>
+
+    <div id="checks"></div>
+    <div id="subjectBadge">S001</div>
+
+    <div id="stabWrap">
+      <div id="stabLabel">条件を整えてください</div>
+      <div id="stabTrack"><div id="stabFill"></div></div>
+    </div>
+
+    <button id="captureBtn" class="off" onclick="capture()">
+      <div id="captureInner"></div>
+    </button>
+  </div>
+</div>
+
+<!-- ========== アップロード中 ========== -->
+<div id="uploading">
+  <div class="spinner"></div>
+  <div style="font-size:15px">アップロード中...</div>
+</div>
+
+<!-- ========== 時間入力（撮影の前に行う） ========== -->
+<div id="timeInput">
+  <h2>所要時間</h2>
+  <p class="sub">切除にかかった時間を入力してください</p>
+
+  <div id="dialWrap">
+    <div class="dial">
+      <div class="dial-label">分</div>
+      <button onclick="adjTime('min', 1)">＋</button>
+      <div class="dial-val" id="tMin">5</div>
+      <button onclick="adjTime('min', -1)">−</button>
+    </div>
+    <div class="dial-colon">:</div>
+    <div class="dial">
+      <div class="dial-label">秒</div>
+      <button onclick="adjTime('sec', 5)">＋</button>
+      <div class="dial-val" id="tSec">00</div>
+      <button onclick="adjTime('sec', -5)">−</button>
+    </div>
+  </div>
+
+  <div id="timeHint">制限時間 7分00秒</div>
+
+  <button id="timeOkBtn" onclick="confirmTime(false)">この時間で撮影する</button>
+  <button id="timeoutBtn" onclick="confirmTime(true)">⏱ 時間切れ（未完了）</button>
+</div>
+
+<!-- ========== 採点結果 ========== -->
+<div id="score">
+  <div id="scoreWait">
+    <div class="spinner"></div>
+    <div style="font-size:15px">採点中...</div>
+    <p class="sub" id="scoreWaitNote">PCで解析しています</p>
+  </div>
+
+  <div id="scoreBody" style="display:none">
+    <div id="scoreTop"><div id="gradeBadge">—</div><div id="totalScore">0<span class="max">/100</span></div></div>
+    <div id="scoreCap"></div>
+    <img id="radarImg" alt="レーダーチャート">
+    <div id="axisList"></div>
+    <div id="severityWrap" style="display:none">
+      <div style="font-size:12px;color:#888;margin-bottom:6px">焦げ段階マスク（重度=赤 / 中度=橙 / 軽度=黄）</div>
+      <img id="severityImg" alt="焦げ段階" style="width:100%;border-radius:12px">
+    </div>
+    <div class="btn-row">
+      <button onclick="retake()">次の被験者へ</button>
+      <button class="ghost" onclick="show('setup')">ホームに戻る</button>
+    </div>
+  </div>
+
+  <div id="scoreFail" style="display:none">
+    <div class="err-box">
+      採点結果を取得できませんでした。<br><br>
+      PC側で <b>auto_evaluate.py</b> が動いているか確認してください。<br>
+      （画像のアップロード自体は成功しています）
+    </div>
+    <div class="btn-row">
+      <button onclick="retake()">次の被験者へ</button>
+      <button class="ghost" onclick="show('setup')">ホームに戻る</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 管理者モード（iPad想定） ========== -->
+<div id="admin">
+  <h2>採点結果 一覧</h2>
+  <div id="adminTabs">
+    <button class="tab active" id="tabOrder" onclick="switchTab('order')">採点順</button>
+    <button class="tab" id="tabRank" onclick="switchTab('rank')">ランキング</button>
+  </div>
+  <div id="adminList">読み込み中...</div>
+  <button onclick="loadAdmin()">🔄 更新</button>
+  <button class="secondary" onclick="show('setup')">ホームに戻る</button>
+</div>
+
+<!-- ========== 管理者 詳細パネル ========== -->
+<div id="adminDetail">
+  <div id="detailHeader">
+    <div id="detailGrade" class="detail-grade">—</div>
+    <div id="detailScore">0<span class="max">/100</span></div>
+  </div>
+  <div id="detailCap"></div>
+  <h3 id="detailTitle">—</h3>
+  <img id="detailRadar" alt="レーダー">
+  <div id="detailAxes"></div>
+  <button class="close-btn" onclick="closeDetail()">← 一覧に戻る</button>
+</div>
+
+<!-- ========== 結果（撮影完了） ========== -->
+<div id="result">
+  <h2 id="resultTitle">撮影完了</h2>
+  <div id="resultContent"></div>
+  <div id="shotCount" class="shot-count"></div>
+  <button id="retakeBtn" onclick="retake()">次の被験者を撮影</button>
+</div>
+
+<script>
+// ============================================================
+//  グローバル変数
+// ============================================================
+let SUPA_URL = "", SUPA_KEY = "", BUCKET = "scans";
+let subjectId = "", videoStream = null, loopId = null;
+let stableCount = 0, shotNumber = 0;
+const STABLE_NEED = 18; // 約3.6秒（200ms × 18）
+
+// ============================================================
+//  撮影ガード閾値
+//  sample_images 3枚の実測に基づく。グレーカード導入時は
+//  WHITE_REF_MIN/MAX を校正板の基準値に差し替えるだけでよい。
+//    実測: 臓器の縦横比 1.35（ブレ1.1%）
+//          臓器の画面占有率 24.1% / 32.8% / 26.4%（← 距離のブレ。要厳格化）
+//          白背景のV値 202 / 225 / 218（← 照明のブレ。要厳格化）
+// ============================================================
+const GUARD = {
+  // ── 距離（臓器の画面占有率）──
+  // 旧実装は 18〜70% と緩すぎ、臓器面積が1.45倍ブレていた。
+  // 実測 24.1 / 32.8 / 26.4%（平均27.7%）を中心に、まず現実的な幅で始める。
+  // 再撮影で実際に撮れることを確認したら、段階的に狭めてよい（±3%程度が理想）。
+  ORGAN_RATIO_MIN: 0.23,
+  ORGAN_RATIO_MAX: 0.32,
+  ORGAN_RATIO_NONE: 0.08,   // これ未満は「臓器が見えない」
+
+  // ── 形（縦横比）: 斜めから撮ると比が崩れるので角度ガードを兼ねる ──
+  // 実測 1.33〜1.37（ブレ1.1%）と極めて安定。逸脱＝斜めから撮っている。
+  ASPECT_TARGET: 1.35,
+  ASPECT_MIN: 1.20,
+  ASPECT_MAX: 1.50,
+
+  // ── 明るさ（背景の白紙のV値。画面全体の平均ではない）──
+  // 実測 202 / 225 / 218。照明を統制すればここは自然に揃うので、
+  // 「照明が正しくセットされているか」の確認として機能する。
+  // ※グレーカード導入時は、校正板の基準値に差し替える
+  WHITE_REF_MIN: 195,
+  WHITE_REF_MAX: 235,
+  WHITE_MIN_PIXELS: 200,    // 白基準として信頼するのに必要な最小画素数
+
+  // ── 白飛び（鏡面反射のスポット）──
+  // 注意: 深さスコアのブレの主因は「白飛びするほど強い反射」ではなく、
+  // 焦げ表面を全体的に明るくする弱い光沢だった。これはソフトでは検出困難なため、
+  // 拡散光による物理的統制で対処する。このガードは強い反射スポットの保険。
+  BLOWOUT_V: 250,
+  BLOWOUT_MAX_RATIO: 0.02,  // 臓器内の2%まで
+
+  // ── 影: 臓器内の「低彩度かつ暗い」画素（焦げではない影）の許容割合 ──
+  SHADOW_V_MAX: 60,
+  SHADOW_SAT_MAX: 0.25,
+  SHADOW_MAX_RATIO: 0.05,   // 臓器内の5%まで
+
+  // ── 位置 ──
+  CENTER_TOLERANCE: 0.15,
+};
+
+// ============================================================
+//  設定の永続化（2回目以降の入力を省略）
+// ============================================================
+function loadSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem("scan_cfg") || "{}");
+    if (s.url) document.getElementById("inUrl").value = s.url;
+    if (s.key) document.getElementById("inKey").value = s.key;
+    if (s.subject) document.getElementById("inSubject").value = s.subject;
+    if (s.side) setSide(s.side);
+    checkConnection();
+  } catch(e) {}
+}
+
+function saveSettings() {
+  localStorage.setItem("scan_cfg", JSON.stringify({
+    url: document.getElementById("inUrl").value.trim(),
+    key: document.getElementById("inKey").value.trim(),
+    subject: document.getElementById("inSubject").value.trim(),
+    side: selectedSide
+  }));
+}
+
+// ============================================================
+//  Supabase接続チェック
+//  sb_publishable_ 形式と eyJhbGci 形式の両方に対応
+// ============================================================
+async function checkConnection() {
+  const url = document.getElementById("inUrl").value.trim().replace(/\/+$/, "");
+  const key = document.getElementById("inKey").value.trim();
+  const st  = document.getElementById("connStatus");
+  const btn = document.getElementById("startBtn");
+
+  if (!url || !key) {
+    st.textContent = "URLとKeyを入力してください";
+    st.className = "ng"; btn.disabled = true; return;
+  }
+
+  st.textContent = "接続確認中..."; st.className = "wait";
+
+  // sb_publishable_ 形式は /storage/v1/object/list/{bucket} で確認
+  // eyJhbGci 形式は /storage/v1/bucket/{bucket} で確認
+  const isNewKey = key.startsWith("sb_publishable_");
+
+  try {
+    let res;
+
+    if (isNewKey) {
+      // 新形式: ファイル一覧取得で接続確認
+      res = await fetch(`${url}/storage/v1/object/list/${BUCKET}`, {
+        method: "POST",
+        headers: {
+          "apikey": key,
+          "Authorization": `Bearer ${key}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ prefix: "", limit: 1 })
+      });
+    } else {
+      // 旧形式: バケット情報取得で接続確認
+      res = await fetch(`${url}/storage/v1/bucket/${BUCKET}`, {
+        headers: { "apikey": key, "Authorization": `Bearer ${key}` }
+      });
+    }
+
+    if (res.ok) {
+      st.textContent = "✓ 接続OK"; st.className = "ok";
+      btn.disabled = false;
+      SUPA_URL = url; SUPA_KEY = key;
+    } else {
+      const body = await res.text();
+      st.textContent = `接続失敗 (${res.status})`; st.className = "ng";
+      btn.disabled = true;
+      console.error("接続失敗:", res.status, body);
+    }
+  } catch(e) {
+    st.textContent = "接続エラー（URLを確認）"; st.className = "ng";
+    btn.disabled = true;
+    console.error("接続エラー:", e);
+  }
+}
+
+// 入力欄の変更を監視
+document.getElementById("inUrl").addEventListener("change", checkConnection);
+document.getElementById("inKey").addEventListener("change", checkConnection);
+
+// ============================================================
+//  カメラ起動
+// ============================================================
+// 「カメラを起動」を押したら、まず所要時間を入力してもらう。
+// 撮影の前に時間を確定させるのは、撮影後だと被験者を待たせるうえ、
+// 入力を忘れたまま次に進んでしまう事故を防ぐため。
+function start() {
+  subjectId = document.getElementById("inSubject").value.trim() || "S001";
+  saveSettings();
+  // 前回の入力をリセット
+  tMin = 5; tSec = 0; isTimedOut = false; elapsedSec = null;
+  renderTime();
+  show("timeInput");
+}
+
+async function startCamera() {
+  try {
+    videoStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: "environment",
+        width:  { ideal: 1920 },
+        height: { ideal: 1080 }
+      },
+      audio: false
+    });
+    document.getElementById("video").srcObject = videoStream;
+    document.getElementById("subjectBadge").textContent = subjectId + " (" + selectedSide + ")";
+    show("scanner");
+    stableCount = 0;
+    loopId = setInterval(analyzeFrame, 200);
+  } catch(e) {
+    alert(
+      "カメラへのアクセスが許可されていません。\n\n" +
+      "【iPhone Safari の場合】\n" +
+      "設定 → Safari → カメラ → 許可\n\n" +
+      "【Chrome の場合】\n" +
+      "アドレスバー左の鍵アイコン → カメラ → 許可"
+    );
+  }
+}
+
+// ============================================================
+//  フレーム解析（クライアント側の簡易チェック）
+// ============================================================
+function analyzeFrame() {
+  const v = document.getElementById("video");
+  if (v.readyState < 2) return;
+
+  const c = document.getElementById("canvas");
+  c.width  = v.videoWidth  || 640;
+  c.height = v.videoHeight || 480;
+  const ctx = c.getContext("2d", { willReadFrequently: true });
+  ctx.drawImage(v, 0, 0);
+
+  const fd = ctx.getImageData(0, 0, c.width, c.height);
+  const checks = quickCheck(fd, c.width, c.height);
+  updateUI(checks);
+}
+
+function quickCheck(imageData, w, h) {
+  const d = imageData.data;
+  const step = 4; // サンプリング間隔（速度のため全ピクセルは見ない）
+
+  // 白基準（背景の白紙）は画面の周辺部だけで測る。中央には臓器があるため。
+  const bandX = w * 0.15, bandY = h * 0.15;
+
+  let samples = 0;
+  let organPx = 0, organXsum = 0, organYsum = 0;
+  let organMinX = w, organMaxX = 0, organMinY = h, organMaxY = 0;
+  let whiteSum = 0, whitePx = 0;
+  let blowoutPx = 0, shadowPx = 0;
+
+  for (let y = 0; y < h; y += step) {
+    for (let x = 0; x < w; x += step) {
+      const i = (y * w + x) * 4;
+      const r = d[i], g = d[i+1], b = d[i+2];
+      samples++;
+
+      const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+      const sat = mx === 0 ? 0 : (mx - mn) / mx;   // HSVのS
+      const v   = mx;                              // HSVのV
+
+      // ── 臓器候補: 赤〜橙の有彩色。焦げ（暗部）も臓器の一部として含める ──
+      const isReddish = (r > g) && (r >= b);
+      const isOrgan = (sat > 0.25 && v > 40 && isReddish) || (v < 80 && isReddish && sat > 0.15);
+      if (isOrgan) {
+        organPx++;
+        organXsum += x; organYsum += y;
+        if (x < organMinX) organMinX = x;
+        if (x > organMaxX) organMaxX = x;
+        if (y < organMinY) organMinY = y;
+        if (y > organMaxY) organMaxY = y;
+
+        // 白飛び（鏡面反射）
+        if (v >= GUARD.BLOWOUT_V) blowoutPx++;
+        // 影（低彩度かつ暗い＝焦げではない影）
+        if (v < GUARD.SHADOW_V_MAX && sat < GUARD.SHADOW_SAT_MAX) shadowPx++;
+      }
+
+      // ── 白基準: 画面周辺部の、明るく低彩度な画素（＝背景の白紙）──
+      const inBorder = (x < bandX || x > w - bandX || y < bandY || y > h - bandY);
+      if (inBorder && sat < 0.15 && v > 150) {
+        whiteSum += v;
+        whitePx++;
+      }
+    }
+  }
+
+  const organRatio = organPx / samples;
+  const checks = {};
+
+  // ── 1. 距離（臓器の画面占有率）──
+  if (organRatio < GUARD.ORGAN_RATIO_NONE) {
+    checks["距離"] = { ok: false, msg: "臓器が見えません" };
+  } else if (organRatio < GUARD.ORGAN_RATIO_MIN) {
+    checks["距離"] = { ok: false, msg: `もっと近づけてください (${Math.round(organRatio*100)}%)` };
+  } else if (organRatio > GUARD.ORGAN_RATIO_MAX) {
+    checks["距離"] = { ok: false, msg: `少し離してください (${Math.round(organRatio*100)}%)` };
+  } else {
+    checks["距離"] = { ok: true, msg: `距離OK (${Math.round(organRatio*100)}%)` };
+  }
+
+  // ── 2. 明るさ（背景の白紙のV値）──
+  if (whitePx < GUARD.WHITE_MIN_PIXELS) {
+    checks["明るさ"] = { ok: false, msg: "白い背景が写っていません" };
+  } else {
+    const whiteRef = whiteSum / whitePx;
+    if (whiteRef < GUARD.WHITE_REF_MIN) {
+      checks["明るさ"] = { ok: false, msg: `暗すぎます — 明るくしてください (${Math.round(whiteRef)})` };
+    } else if (whiteRef > GUARD.WHITE_REF_MAX) {
+      checks["明るさ"] = { ok: false, msg: `明るすぎます — 弱めてください (${Math.round(whiteRef)})` };
+    } else {
+      checks["明るさ"] = { ok: true, msg: `明るさOK (${Math.round(whiteRef)})` };
+    }
+  }
+
+  if (organPx > 20) {
+    // ── 3. 形（縦横比）＝ 傾きガードを兼ねる ──
+    const bw = organMaxX - organMinX, bh = organMaxY - organMinY;
+    const aspect = bh > 0 ? bw / bh : 0;
+    if (aspect < GUARD.ASPECT_MIN) {
+      checks["向き"] = { ok: false, msg: `臓器を横向きにしてください (${aspect.toFixed(2)})` };
+    } else if (aspect > GUARD.ASPECT_MAX) {
+      checks["向き"] = { ok: false, msg: `斜めから撮らず真上から (${aspect.toFixed(2)})` };
+    } else {
+      checks["向き"] = { ok: true, msg: `向きOK (${aspect.toFixed(2)})` };
+    }
+
+    // ── 4. 白飛び（鏡面反射）──
+    const blowRatio = blowoutPx / organPx;
+    if (blowRatio > GUARD.BLOWOUT_MAX_RATIO) {
+      checks["反射"] = { ok: false, msg: `光が反射しています — 角度を変えて (${Math.round(blowRatio*100)}%)` };
+    } else {
+      checks["反射"] = { ok: true, msg: "反射なし" };
+    }
+
+    // ── 5. 影 ──
+    const shadowRatio = shadowPx / organPx;
+    if (shadowRatio > GUARD.SHADOW_MAX_RATIO) {
+      checks["影"] = { ok: false, msg: `影がかかっています (${Math.round(shadowRatio*100)}%)` };
+    } else {
+      checks["影"] = { ok: true, msg: "影なし" };
+    }
+
+    // ── 6. 位置 ──
+    const avgX = organXsum / organPx, avgY = organYsum / organPx;
+    const offX = Math.abs(avgX - w / 2) / w;
+    const offY = Math.abs(avgY - h / 2) / h;
+    if (Math.max(offX, offY) > GUARD.CENTER_TOLERANCE) {
+      const dir = offX > offY
+        ? (avgX < w / 2 ? "右へ移動" : "左へ移動")
+        : (avgY < h / 2 ? "下へ移動" : "上へ移動");
+      checks["位置"] = { ok: false, msg: `中央からずれています → ${dir}` };
+    } else {
+      checks["位置"] = { ok: true, msg: "位置OK" };
+    }
+  }
+
+  return checks;
+}
+
+function updateUI(checks) {
+  const allOk = Object.values(checks).every(c => c.ok);
+
+  // ガイド枠の色
+  document.getElementById("guideOval").className = allOk ? "" : "ng";
+
+  // チェックリスト更新
+  document.getElementById("checks").innerHTML =
+    Object.values(checks).map(c =>
+      `<div class="ck">` +
+        `<div class="ck-dot ${c.ok ? 'ok' : 'ng'}"></div>` +
+        `<span class="ck-msg">${c.msg}</span>` +
+      `</div>`
+    ).join("");
+
+  // 安定カウント
+  if (allOk) {
+    stableCount = Math.min(stableCount + 1, STABLE_NEED);
+  } else {
+    stableCount = Math.max(stableCount - 2, 0);
+  }
+
+  const ratio = stableCount / STABLE_NEED;
+  document.getElementById("stabFill").style.width = (ratio * 100) + "%";
+
+  // 撮影ボタンの有効化
+  const ready = stableCount >= STABLE_NEED;
+  document.getElementById("captureBtn").className = ready ? "" : "off";
+  document.getElementById("stabLabel").textContent =
+    ready ? "✓ 準備完了 — ボタンを押して撮影" :
+    allOk ? "そのままキープしてください..." :
+            "上記の項目を修正してください";
+}
+
+// ============================================================
+//  ガイド枠の領域を計算してクロップ
+// ============================================================
+function getCropRect(videoW, videoH) {
+  // iPhoneの縦持ち撮影では短辺が横、長辺が縦
+  // ガイド枠はviewfinderの短辺を基準に width:72%
+  const shortSide = Math.min(videoW, videoH);
+  const longSide  = Math.max(videoW, videoH);
+
+  // ビデオが横長(landscape)か縦長(portrait)かで軸を合わせる
+  const isPortrait = videoH > videoW;
+  const frameW = isPortrait ? videoW : videoH; // 画面の短辺方向
+  const frameH = isPortrait ? videoH : videoW; // 画面の長辺方向
+
+  // ガイド枠: 短辺の86%幅、縦横比1.35（実測した模擬臓器の形）、中心は長辺の48%
+  // CSSの #guideOval (width:86%; aspect-ratio:1.35) と一致させる
+  const boxW = frameW * 0.86;
+  const boxH = boxW / 1.35;
+  const margin = boxW * 0.10; // 10%マージン（採点側で臓器の外周も見るため少し広めに切る）
+
+  const cx = frameW / 2;
+  const cy = frameH * 0.48;
+
+  const x = Math.max(0, Math.round(cx - boxW / 2 - margin));
+  const y = Math.max(0, Math.round(cy - boxH / 2 - margin));
+  const w = Math.min(frameW - x, Math.round(boxW + margin * 2));
+  const h = Math.min(frameH - y, Math.round(boxH + margin * 2));
+
+  // 実際のvideoピクセル座標に変換
+  if (isPortrait) {
+    return { x, y, w, h };
+  } else {
+    // landscapeの場合は軸が入れ替わっている
+    return { x: y, y: x, w: h, h: w };
+  }
+}
+
+// ============================================================
+//  撮影 → クロップ → Supabaseにアップロード
+// ============================================================
+async function capture() {
+  if (stableCount < STABLE_NEED) return;
+
+  const v = document.getElementById("video");
+  const c = document.getElementById("canvas");
+
+  // フル解像度でフレーム取得
+  const fullW = v.videoWidth;
+  const fullH = v.videoHeight;
+  c.width  = fullW;
+  c.height = fullH;
+  c.getContext("2d").drawImage(v, 0, 0);
+
+  // カメラ停止
+  clearInterval(loopId);
+  videoStream.getTracks().forEach(t => t.stop());
+
+  // ガイド枠でクロップ
+  const crop = getCropRect(fullW, fullH);
+  const cropCanvas = document.createElement("canvas");
+  cropCanvas.width  = crop.w;
+  cropCanvas.height = crop.h;
+  cropCanvas.getContext("2d").drawImage(
+    c,
+    crop.x, crop.y, crop.w, crop.h,
+    0, 0, crop.w, crop.h
+  );
+
+  // アップロード画面表示
+  show("uploading");
+
+  // クロップ画像をJPEGに変換
+  const blob = await new Promise(r => cropCanvas.toBlob(r, "image/jpeg", 0.92));
+
+  // ファイル名: S001_20260615_143022.jpg
+  const now = new Date();
+  const ts = now.getFullYear().toString() +
+    String(now.getMonth()+1).padStart(2,"0") +
+    String(now.getDate()).padStart(2,"0") + "_" +
+    String(now.getHours()).padStart(2,"0") +
+    String(now.getMinutes()).padStart(2,"0") +
+    String(now.getSeconds()).padStart(2,"0");
+  // 所要時間をファイル名に埋め込む。
+  //   _t285 → 285秒で完了 /  _tTO → 時間切れ
+  // PC側(auto_evaluate.py)はこれを読んで時間スコアを計算する。
+  // 時間だけを別送すると画像と対応づける手間が増えるので、
+  // ファイル名に載せてしまうのが確実。
+  const timeTag = isTimedOut ? "tTO" : `t${elapsedSec}`;
+  const recordKey = `${subjectId}_${selectedSide}_${ts}_${timeTag}`;
+  const filename = `${recordKey}.jpg`;
+
+  try {
+    // ── 画像をSupabase Storageにアップロード ──
+    const res = await fetch(
+      `${SUPA_URL}/storage/v1/object/${BUCKET}/${filename}`,
+      {
+        method: "POST",
+        headers: {
+          "apikey": SUPA_KEY,
+          "Authorization": `Bearer ${SUPA_KEY}`,
+          "Content-Type": "image/jpeg",
+          "x-upsert": "true"
+        },
+        body: blob
+      }
+    );
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`${res.status}: ${errText}`);
+    }
+
+    // ── メタ情報もJSON保存 ──
+    const meta = {
+      subject_id: subjectId,
+      timestamp: now.toISOString(),
+      filename: filename,
+      elapsed_sec: elapsedSec,
+      timed_out: isTimedOut,
+      image_width: crop.w,
+      image_height: crop.h,
+      crop_x: crop.x,
+      crop_y: crop.y,
+      original_width: fullW,
+      original_height: fullH
+    };
+
+    await fetch(
+      `${SUPA_URL}/storage/v1/object/${BUCKET}/${recordKey}_meta.json`,
+      {
+        method: "POST",
+        headers: {
+          "apikey": SUPA_KEY,
+          "Authorization": `Bearer ${SUPA_KEY}`,
+          "Content-Type": "application/json",
+          "x-upsert": "true"
+        },
+        body: JSON.stringify(meta)
+      }
+    );
+
+    // 成功 → 採点結果の到着を待つ（ポーリング）
+    shotNumber++;
+
+    // 被験者IDを自動インクリメント（S001 → S002）
+    incrementSubjectId();
+
+    // PC側が採点を終えて results/<recordKey>.json を置くのを待ち、
+    // 届いたらこの端末（iPhone）に点数を表示する。
+    startPolling(recordKey);
+
+  } catch(e) {
+    show("result");
+    document.getElementById("resultTitle").textContent = "エラー";
+    document.getElementById("resultContent").innerHTML =
+      `<div class="err-box">` +
+        `アップロードに失敗しました。<br><br>` +
+        `${e.message}<br><br>` +
+        `インターネット接続を確認してください。` +
+      `</div>`;
+  }
+}
+
+function incrementSubjectId() {
+  const match = subjectId.match(/^([A-Za-z]*)(\d+)$/);
+  if (match) {
+    const prefix = match[1];
+    const num = Number(match[2]) + 1;
+    const padded = String(num).padStart(match[2].length, "0");
+    subjectId = prefix + padded;
+    document.getElementById("inSubject").value = subjectId;
+    saveSettings();
+  }
+}
+
+// ============================================================
+//  画面切替
+// ============================================================
+function show(id) {
+  ["setup", "scanner", "uploading", "result",
+   "timeInput", "score", "admin"].forEach(s => {
+    const el = document.getElementById(s);
+    if (el) el.style.display = "none";
+  });
+  // #score は block レイアウト、他は flex
+  const el = document.getElementById(id);
+  if (el) { el.style.display = "flex"; el.scrollTop = 0; }
+}
+
+function retake() {
+  saveSettings();
+  stableCount = 0;
+  stopPolling();
+  show("setup");
+  document.getElementById("subjectBadge").textContent = subjectId;
+  checkConnection();
+}
+
+// ============================================================
+//  時間入力（撮影の前に行う）
+// ============================================================
+//  制限時間は7分。熟練者でも通常8〜10分かかる作業なので、
+//  7分で完了できなければ「時間切れ」ボタンを押してもらう。
+//  時間切れの場合、時間スコアは0点になる。
+const TIME_LIMIT_SEC = 420;   // 7分
+
+let tMin = 5, tSec = 0;
+let elapsedSec = null;        // 入力された所要時間（秒）
+let isTimedOut = false;       // 時間切れかどうか
+
+function adjTime(unit, delta) {
+  if (unit === "min") {
+    tMin = Math.max(0, Math.min(20, tMin + delta));
+  } else {
+    tSec += delta;
+    // 秒が60を超えたら分に繰り上げ、0未満なら繰り下げる
+    if (tSec >= 60) { tSec -= 60; tMin = Math.min(20, tMin + 1); }
+    if (tSec < 0)   { tSec += 60; tMin = Math.max(0, tMin - 1); }
+  }
+  renderTime();
+}
+
+function renderTime() {
+  document.getElementById("tMin").textContent = tMin;
+  document.getElementById("tSec").textContent = String(tSec).padStart(2, "0");
+
+  const total = tMin * 60 + tSec;
+  const hint = document.getElementById("timeHint");
+  if (total > TIME_LIMIT_SEC) {
+    // 制限時間を超えた値が入っている＝時間切れのはず
+    hint.textContent = "制限時間(7分00秒)を超えています → 時間切れボタンを使ってください";
+    hint.className = "over";
+  } else {
+    hint.textContent = "制限時間 7分00秒";
+    hint.className = "";
+  }
+}
+
+function confirmTime(timedOut) {
+  isTimedOut = timedOut;
+  elapsedSec = timedOut ? null : (tMin * 60 + tSec);
+
+  // 時間切れでないのに制限時間を超えている場合は、入力ミスの可能性が高い
+  if (!timedOut && elapsedSec > TIME_LIMIT_SEC) {
+    if (!confirm("制限時間(7分)を超えています。\n時間切れとして記録しますか?")) {
+      return;   // 入力し直してもらう
+    }
+    isTimedOut = true;
+    elapsedSec = null;
+  }
+  startCamera();
+}
+
+// ============================================================
+//  採点結果の取得（ポーリング）
+// ============================================================
+//  PC側(auto_evaluate.py)が採点を終えると、Supabase Storage の
+//  results/<画像名>.json に結果が置かれる。それを繰り返し取りに行く。
+let pollTimer = null, pollCount = 0;
+const POLL_MAX = 40;          // 3秒 × 40 = 最大2分待つ
+const POLL_INTERVAL_MS = 3000;
+
+function startPolling(recordKey) {
+  pollCount = 0;
+  show("score");
+  document.getElementById("scoreWait").style.display = "flex";
+  document.getElementById("scoreBody").style.display = "none";
+  document.getElementById("scoreFail").style.display = "none";
+
+  const tick = async () => {
+    pollCount++;
+    const note = document.getElementById("scoreWaitNote");
+    note.textContent = `PCで解析しています（${pollCount * 3}秒経過）`;
+
+    const score = await fetchScore(recordKey);
+    if (score) {
+      stopPolling();
+      renderScore(score, recordKey);
+      return;
+    }
+    if (pollCount >= POLL_MAX) {
+      stopPolling();
+      document.getElementById("scoreWait").style.display = "none";
+      document.getElementById("scoreFail").style.display = "flex";
+      return;
+    }
+    pollTimer = setTimeout(tick, POLL_INTERVAL_MS);
+  };
+  pollTimer = setTimeout(tick, POLL_INTERVAL_MS);
+}
+
+function stopPolling() {
+  if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+}
+
+async function fetchScore(recordKey) {
+  try {
+    const res = await fetch(
+      `${SUPA_URL}/storage/v1/object/${BUCKET}/results/${recordKey}.json?t=${Date.now()}`,
+      { headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}` } }
+    );
+    if (!res.ok) return null;   // まだ採点が終わっていない
+    return await res.json();
+  } catch(e) {
+    return null;
+  }
+}
+
+// 評価軸の表示定義（割面2軸は未実装なので N/A 表示）
+const AXES = [
+  { key: "residual_tumor_score", name: "残存腫瘍", max: 25, na: false },
+  { key: "char_severity_score",  name: "焦げ度合", max: 20, na: false, hasSeverity: true },
+  { key: "circularity_score",    name: "円形度",   max: 10, na: false },
+  { key: "time_score",           name: "時間",     max: 10, na: false },
+  { key: "smoothness_score",     name: "平滑度",   max: 20, na: true  },
+  { key: "balance_score",        name: "バランス", max: 15, na: true  },
+];
+
+function renderScore(s, recordKey) {
+  document.getElementById("scoreWait").style.display = "none";
+  document.getElementById("scoreBody").style.display = "flex";
+
+  // グレード
+  const grade = s.grade || "";
+  const badge = document.getElementById("gradeBadge");
+  badge.textContent = grade;
+  const letter = (grade[0] || "").toLowerCase();
+  badge.className = ["s","a","b","c","d"].includes(letter) ? letter : "";
+
+  // 総合点
+  document.getElementById("totalScore").innerHTML =
+    `${(s.total_score ?? 0).toFixed(1)}<span class="max">/100</span>`;
+
+  // 割面が未実装の間は上限が65点であることを明示する。
+  // これを書かないと「なぜ満点が取れないのか」が伝わらない。
+  const cap = s.attainable_points ?? 100;
+  const capEl = document.getElementById("scoreCap");
+  capEl.textContent = (cap < 100)
+    ? `現在の上限 ${cap}点（平滑度・バランスは割面解析の実装待ちのため0点）`
+    : "";
+
+  // レーダーチャート
+  const img = document.getElementById("radarImg");
+  img.src = `${SUPA_URL}/storage/v1/object/${BUCKET}/results/${recordKey}_radar.png?t=${Date.now()}`;
+  img.onerror = () => { img.style.display = "none"; };
+  img.style.display = "block";
+
+  // 軸ごとの内訳
+  const list = document.getElementById("axisList");
+  list.innerHTML = "";
+  const cutEnabled = !!s.cut_face_enabled;
+  AXES.forEach(a => {
+    const isNA = a.na && !cutEnabled;
+    const pts = isNA ? 0 : (s[a.key] ?? 0);
+    const pct = a.max > 0 ? (pts / a.max * 100) : 0;
+    let fillCls = "";
+    if (!isNA) {
+      if (pct < 30) fillCls = "bad";
+      else if (pct < 60) fillCls = "low";
+    }
+    const div = document.createElement("div");
+    div.className = "axis" + (isNA ? " na" : "");
+    // 焦げ度合いは軽度/中度/重度の内訳を追加表示
+    let extra = "";
+    if (a.hasSeverity && !isNA) {
+      const sev  = Math.round((s.burn_severe_ratio  ?? 0) * 100);
+      const mod  = Math.round((s.burn_moderate_ratio ?? 0) * 100);
+      const mild = Math.round((s.burn_mild_ratio     ?? 0) * 100);
+      extra =
+        `<div class="sev-bars">` +
+          `<div class="sev-row"><span class="sev-label">重度</span><div class="sev-track"><div class="sev-fill bad"  style="width:${sev}%"></div></div><span class="sev-pct">${sev}%</span></div>` +
+          `<div class="sev-row"><span class="sev-label">中度</span><div class="sev-track"><div class="sev-fill low"  style="width:${mod}%"></div></div><span class="sev-pct">${mod}%</span></div>` +
+          `<div class="sev-row"><span class="sev-label">軽度</span><div class="sev-track"><div class="sev-fill good" style="width:${mild}%"></div></div><span class="sev-pct">${mild}%</span></div>` +
+        `</div>`;
+    }
+    div.innerHTML =
+      `<div class="axis-top">` +
+        `<span class="axis-name">${a.name}${isNA ? "（未実装）" : ""}</span>` +
+        `<span class="axis-pts">${pts.toFixed(1)} / ${a.max}</span>` +
+      `</div>` +
+      `<div class="axis-bar"><div class="axis-fill ${fillCls}" style="width:${pct}%"></div></div>` +
+      extra;
+    list.appendChild(div);
+  });
+
+  // 焦げ段階マスク画像（research_system が生成する severity PNG を表示）
+  const sevEl = document.getElementById("severityImg");
+  if (sevEl) {
+    sevEl.src = `${SUPA_URL}/storage/v1/object/${BUCKET}/results/${recordKey}_severity.png?t=${Date.now()}`;
+    sevEl.onerror = () => { sevEl.parentElement.style.display="none"; };
+    sevEl.parentElement.style.display = "block";
+  }
+
+  // 時間切れだった場合は明示する
+  if (s.timed_out) {
+    const warn = document.createElement("div");
+    warn.className = "err-box";
+    warn.style.fontSize = "13px";
+    warn.innerHTML = "⏱ 時間切れ（7分以内に完了せず）のため、時間スコアは0点です";
+    list.appendChild(warn);
+  }
+}
+
+// ============================================================
+//  管理者モード（iPad想定）
+// ============================================================
+//  results/_index.json に全結果の一覧が入っている。
+//  採点順とランキングを切り替えて表示する。
+let adminTab = "order";
+let adminData = [];
+
+function switchTab(tab) {
+  adminTab = tab;
+  document.getElementById("tabOrder").className = "tab" + (tab === "order" ? " active" : "");
+  document.getElementById("tabRank").className  = "tab" + (tab === "rank"  ? " active" : "");
+  renderAdmin();
+}
+
+async function openAdmin() {
+  // 接続情報が未設定なら開けない
+  const url = document.getElementById("inUrl").value.trim();
+  const key = document.getElementById("inKey").value.trim();
+  if (!url || !key) {
+    alert("先に Supabase の接続情報を入力してください");
+    return;
+  }
+  SUPA_URL = url.replace(/\/$/, "");
+  SUPA_KEY = key;
+  show("admin");
+  loadAdmin();
+}
+
+async function loadAdmin() {
+  const list = document.getElementById("adminList");
+  list.innerHTML = "読み込み中...";
+  try {
+    // Storage の List API で results/ 以下の全ファイルを取得
+    // _index.json への依存をやめ、個別JSONを直接列挙する方式。
+    // これによりRLSのUPDATE制限に引っかからない。
+    const res = await fetch(
+      `${SUPA_URL}/storage/v1/object/list/${BUCKET}`,
+      {
+        method: "POST",
+        headers: {
+          "apikey": SUPA_KEY,
+          "Authorization": `Bearer ${SUPA_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ prefix: "results/", limit: 200, offset: 0 }),
+      }
+    );
+    if (!res.ok) { list.innerHTML = "まだ採点結果がありません"; return; }
+    const files = await res.json();
+
+    // .json ファイルのうち、_radar/_card/_meta/_index を除いたものがスコア本体
+    const jsonFiles = (files || [])
+      .map(f => f.name)
+      .filter(n => n.endsWith(".json") &&
+                   !n.includes("_radar") && !n.includes("_card") &&
+                   !n.includes("_meta") && !n.includes("_index"));
+
+    if (jsonFiles.length === 0) { list.innerHTML = "まだ採点結果がありません"; return; }
+
+    // 各JSONを並列取得（最大10件ずつ）
+    const results = [];
+    for (let i = 0; i < jsonFiles.length; i += 10) {
+      const batch = jsonFiles.slice(i, i + 10);
+      const fetched = await Promise.all(batch.map(async fname => {
+        try {
+          const r = await fetch(
+            `${SUPA_URL}/storage/v1/object/${BUCKET}/results/${fname}?t=${Date.now()}`,
+            { headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}` } }
+          );
+          return r.ok ? await r.json() : null;
+        } catch(e) { return null; }
+      }));
+      results.push(...fetched.filter(Boolean));
+    }
+    adminData = results;
+    renderAdmin();
+  } catch(e) {
+    list.innerHTML = `読み込みに失敗しました: ${e.message}`;
+  }
+}
+
+function renderAdmin() {
+  const list = document.getElementById("adminList");
+  if (!Array.isArray(adminData) || adminData.length === 0) {
+    list.innerHTML = "まだ採点結果がありません";
+    return;
+  }
+
+  let rows = adminData.slice();
+  if (adminTab === "rank") {
+    rows.sort((a, b) => (b.total_score ?? 0) - (a.total_score ?? 0));
+  } else {
+    // 採点順（record_key に日時が入っているので昇順で採点した順になる）
+    rows.sort((a, b) => (a.record_key || "").localeCompare(b.record_key || ""));
+  }
+
+  list.innerHTML = "";
+  rows.forEach((r, i) => {
+    const div = document.createElement("div");
+    div.className = "rec"; div.style.cursor="pointer"; div.onclick = () => openDetail(r);
+
+    // ランキングでは順位、採点順では通し番号を出す
+    const rankCls = (adminTab === "rank" && i < 3) ? "rec-rank top" : "rec-rank";
+    const rankTxt = (adminTab === "rank") ? `${i+1}` : `${i+1}`;
+
+    let meta = "";
+    if (r.timed_out) {
+      meta = "時間切れ";
+    } else if (r.elapsed_sec != null) {
+      const m = Math.floor(r.elapsed_sec / 60), s = r.elapsed_sec % 60;
+      meta = `${m}分${String(s).padStart(2,"0")}秒`;
+    }
+    if (r.recorded_at) {
+      meta += (meta ? " ・ " : "") + r.recorded_at.slice(5, 16);
+    }
+
+    div.innerHTML =
+      `<div class="${rankCls}">${rankTxt}</div>` +
+      `<div class="rec-main">` +
+        `<div class="rec-id">${r.subject_id ?? "—"}</div>` +
+        `<div class="rec-meta">${meta}</div>` +
+      `</div>` +
+      `<div>` +
+        `<div class="rec-score">${(r.total_score ?? 0).toFixed(1)}</div>` +
+        `<div class="rec-grade">${r.grade ?? ""}</div>` +
+      `</div>`;
+    list.appendChild(div);
+  });
+}
+
+// ============================================================
+//  左右選択
+// ============================================================
+let selectedSide = "left";
+
+function setSide(side) {
+  selectedSide = side;
+  document.getElementById("sideLeft").className  = "side-btn" + (side === "left"  ? " active" : "");
+  document.getElementById("sideRight").className = "side-btn" + (side === "right" ? " active" : "");
+}
+
+// ============================================================
+//  管理者モード 詳細パネル
+// ============================================================
+async function openDetail(r) {
+  const panel = document.getElementById("adminDetail");
+  panel.style.display = "block";
+  panel.scrollTop = 0;
+
+  // グレードバッジ
+  const grade = r.grade || "";
+  const gb = document.getElementById("detailGrade");
+  gb.textContent = grade;
+  gb.className = "detail-grade " + (["S","A","B","C","D"].includes(grade[0]) ? grade[0].toLowerCase() : "");
+
+  // 総合点
+  document.getElementById("detailScore").innerHTML =
+    `${(r.total_score ?? 0).toFixed(1)}<span class="max">/100</span>`;
+
+  // タイトル（被験者ID＋日時）
+  let titleTxt = r.subject_id ?? "—";
+  if (r.recorded_at) titleTxt += "  " + r.recorded_at.slice(5, 16);
+  document.getElementById("detailTitle").textContent = titleTxt;
+
+  // レーダー
+  const radar = document.getElementById("detailRadar");
+  radar.style.display = "none";
+  if (r.record_key) {
+    radar.src = `${SUPA_URL}/storage/v1/object/${BUCKET}/results/${r.record_key}_radar.png?t=${Date.now()}`;
+    radar.onload  = () => { radar.style.display = "block"; };
+    radar.onerror = () => { radar.style.display = "none"; };
+  }
+
+  // 軸の詳細 — まず一覧データで仮表示してから、JSONが取れたら更新
+  const axes = document.getElementById("detailAxes");
+  const cap  = document.getElementById("detailCap");
+  axes.innerHTML = "<div style='color:#888;font-size:13px'>詳細を読み込み中...</div>";
+  cap.textContent = "";
+
+  try {
+    const res = await fetch(
+      `${SUPA_URL}/storage/v1/object/${BUCKET}/results/${r.record_key}.json?t=${Date.now()}`,
+      { headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}` } }
+    );
+    const score = res.ok ? await res.json() : null;
+    if (score) {
+      // 上限説明
+      const attainable = score.attainable_points ?? 100;
+      cap.textContent = attainable < 100
+        ? `現在の上限 ${attainable}点（平滑度・バランスは割面解析の実装待ちのため0点）`
+        : "";
+
+      // 軸内訳（スコア画面と同じ関数で描く）
+      axes.innerHTML = "";
+      const cutEnabled = !!score.cut_face_enabled;
+      AXES.forEach(a => {
+        const isNA = a.na && !cutEnabled;
+        const pts  = isNA ? 0 : (score[a.key] ?? 0);
+        const pct  = a.max > 0 ? (pts / a.max * 100) : 0;
+        let fillCls = "";
+        if (!isNA) { if (pct < 30) fillCls = "bad"; else if (pct < 60) fillCls = "low"; }
+        const div = document.createElement("div");
+        div.className = "axis" + (isNA ? " na" : "");
+        div.innerHTML =
+          `<div class="axis-top">` +
+            `<span class="axis-name">${a.name}${isNA ? "（未実装）" : ""}</span>` +
+            `<span class="axis-pts">${pts.toFixed(1)} / ${a.max}</span>` +
+          `</div>` +
+          `<div class="axis-bar"><div class="axis-fill ${fillCls}" style="width:${pct}%"></div></div>`;
+        axes.appendChild(div);
+      });
+
+      // 時間切れ表示
+      if (score.timed_out) {
+        const warn = document.createElement("div");
+        warn.className = "err-box"; warn.style.fontSize = "13px";
+        warn.innerHTML = "⏱ 時間切れ（7分以内に完了せず）";
+        axes.appendChild(warn);
+      } else if (score.elapsed_sec != null) {
+        const m2 = Math.floor(score.elapsed_sec/60), sec=score.elapsed_sec%60;
+        const note = document.createElement("div");
+        note.style.cssText="font-size:13px;color:#888;padding:4px 2px";
+        note.textContent = `所要時間 ${m2}分${String(sec).padStart(2,"0")}秒`;
+        axes.appendChild(note);
+      }
+    } else {
+      axes.innerHTML = "<div style='color:#888;font-size:13px'>詳細データが見つかりません（採点結果のJSONがまだアップロードされていない可能性があります）</div>";
+    }
+  } catch(e) {
+    axes.innerHTML = `<div style='color:#ff6b6b;font-size:13px'>取得エラー: ${e.message}</div>`;
+  }
+}
+
+function closeDetail() {
+  document.getElementById("adminDetail").style.display = "none";
+}
+
+// ============================================================
+//  初期化
+// ============================================================
+loadSettings();
+renderTime();
+</script>
+</body>
+</html>
