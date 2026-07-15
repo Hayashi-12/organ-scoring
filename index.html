@@ -97,14 +97,19 @@ button{font-family:inherit}
 #timeInput{align-items:center;justify-content:center}
 #timeInput h2{font-size:20px;font-weight:600}
 #timeInput .sub{font-size:13px;color:#888;text-align:center;margin-top:-6px}
-#dialWrap{display:flex;align-items:center;gap:14px;margin:1.2rem 0}
-.dial{display:flex;flex-direction:column;align-items:center;gap:8px}
-.dial-label{font-size:12px;color:#888}
-.dial button{width:74px;height:52px;border-radius:14px;background:#1c1c1e;border:1px solid #333;color:#34c759;font-size:26px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.dial button:active{background:#2c2c2e}
-.dial-val{font-size:46px;font-weight:700;font-variant-numeric:tabular-nums;min-width:74px;text-align:center}
-.dial-colon{font-size:40px;font-weight:700;color:#555;padding-top:22px}
-#timeHint{font-size:13px;color:#888;margin-bottom:0.6rem}
+/* ドラムロール（ホイールピッカー）風の時間入力 */
+#drumWrap{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;margin:1.4rem 0;height:200px}
+.drum-col{position:relative;width:72px;height:200px}
+.drum-scroll{height:200px;overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.drum-scroll::-webkit-scrollbar{display:none}
+/* 上下に余白を作り、中央に選択項目が来るようにする（1項目40px、中央=80pxパディング）*/
+.drum-scroll::before,.drum-scroll::after{content:"";display:block;height:80px}
+.drum-item{height:40px;line-height:40px;text-align:center;font-size:30px;font-weight:600;font-variant-numeric:tabular-nums;scroll-snap-align:center;color:#555;transition:color 0.15s}
+.drum-item.active{color:#fff;font-size:34px}
+.drum-unit{font-size:20px;font-weight:600;color:#888;padding-top:4px}
+/* 中央の選択枠 */
+.drum-highlight{position:absolute;left:0;right:0;top:80px;height:40px;background:rgba(255,255,255,0.06);border-top:1px solid #333;border-bottom:1px solid #333;pointer-events:none;border-radius:8px}
+#timeHint{font-size:13px;color:#888;margin-bottom:0.6rem;text-align:center}
 #timeHint.over{color:#ff9f0a}
 #timeOkBtn{width:100%;max-width:420px;padding:16px;border-radius:14px;background:#34c759;color:#000;font-size:17px;font-weight:600;border:none;cursor:pointer}
 #timeOkBtn:active{opacity:0.75}
@@ -263,22 +268,19 @@ button{font-family:inherit}
 <!-- ========== 時間入力（撮影の前に行う） ========== -->
 <div id="timeInput">
   <h2>所要時間</h2>
-  <p class="sub">切除にかかった時間を入力してください</p>
+  <p class="sub">切除にかかった時間を選んでください</p>
 
-  <div id="dialWrap">
-    <div class="dial">
-      <div class="dial-label">分</div>
-      <button onclick="adjTime('min', 1)">＋</button>
-      <div class="dial-val" id="tMin">5</div>
-      <button onclick="adjTime('min', -1)">−</button>
+  <div id="drumWrap">
+    <div class="drum-col">
+      <div class="drum-scroll" id="drumMin"></div>
     </div>
-    <div class="dial-colon">:</div>
-    <div class="dial">
-      <div class="dial-label">秒</div>
-      <button onclick="adjTime('sec', 5)">＋</button>
-      <div class="dial-val" id="tSec">00</div>
-      <button onclick="adjTime('sec', -5)">−</button>
+    <div class="drum-unit">分</div>
+    <div class="drum-col">
+      <div class="drum-scroll" id="drumSec"></div>
     </div>
+    <div class="drum-unit">秒</div>
+    <!-- 中央の選択枠（固定） -->
+    <div class="drum-highlight"></div>
   </div>
 
   <div id="timeHint">制限時間 7分00秒</div>
@@ -345,6 +347,10 @@ button{font-family:inherit}
   <h3 id="detailTitle">—</h3>
   <img id="detailRadar" alt="レーダー">
   <div id="detailAxes"></div>
+  <div id="detailSeverityWrap" style="display:none">
+    <div style="font-size:12px;color:#888;margin-bottom:6px">焦げ段階マスク（重度=赤 / 中度=橙 / 軽度=黄）</div>
+    <img id="detailSeverity" alt="焦げ段階" style="width:100%;border-radius:12px">
+  </div>
   <button class="close-btn" onclick="closeDetail()">← 一覧に戻る</button>
 </div>
 
@@ -509,8 +515,9 @@ function start() {
   saveSettings();
   // 前回の入力をリセット
   tMin = 5; tSec = 0; isTimedOut = false; elapsedSec = null;
-  renderTime();
   show("timeInput");
+  // 画面表示後にドラムを構築（scrollTop は表示後でないと効かない）
+  requestAnimationFrame(() => initDrums());
 }
 
 async function startCamera() {
@@ -923,27 +930,56 @@ let tMin = 5, tSec = 0;
 let elapsedSec = null;        // 入力された所要時間（秒）
 let isTimedOut = false;       // 時間切れかどうか
 
-function adjTime(unit, delta) {
-  if (unit === "min") {
-    tMin = Math.max(0, Math.min(20, tMin + delta));
-  } else {
-    tSec += delta;
-    // 秒が60を超えたら分に繰り上げ、0未満なら繰り下げる
-    if (tSec >= 60) { tSec -= 60; tMin = Math.min(20, tMin + 1); }
-    if (tSec < 0)   { tSec += 60; tMin = Math.max(0, tMin - 1); }
+// ── ドラムロール（ホイールピッカー）の構築 ──
+// スクロールで数字を選ぶ。中央に来た項目が選択値になる。
+const ITEM_H = 40;   // .drum-item の高さと一致させる
+
+function buildDrum(el, count, current, onChange) {
+  el.innerHTML = "";
+  for (let i = 0; i < count; i++) {
+    const d = document.createElement("div");
+    d.className = "drum-item";
+    d.textContent = String(i).padStart(2, "0");
+    el.appendChild(d);
   }
-  renderTime();
+  // 初期位置へスクロール
+  el.scrollTop = current * ITEM_H;
+  updateDrumActive(el);
+
+  // スクロールが止まったら中央の値を確定
+  let timer = null;
+  el.addEventListener("scroll", () => {
+    updateDrumActive(el);
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      // 最寄りの項目にスナップ
+      const idx = Math.round(el.scrollTop / ITEM_H);
+      el.scrollTo({ top: idx * ITEM_H, behavior: "smooth" });
+      onChange(idx);
+      updateDrumActive(el);
+    }, 120);
+  });
 }
 
-function renderTime() {
-  document.getElementById("tMin").textContent = tMin;
-  document.getElementById("tSec").textContent = String(tSec).padStart(2, "0");
+function updateDrumActive(el) {
+  const idx = Math.round(el.scrollTop / ITEM_H);
+  [...el.children].forEach((c, i) => {
+    c.classList.toggle("active", i === idx);
+  });
+}
 
+function initDrums() {
+  // 分: 0〜20、秒: 0〜59
+  buildDrum(document.getElementById("drumMin"), 21, tMin, v => { tMin = v; onTimeChange(); });
+  buildDrum(document.getElementById("drumSec"), 60, tSec, v => { tSec = v; onTimeChange(); });
+  onTimeChange();
+}
+
+function onTimeChange() {
   const total = tMin * 60 + tSec;
   const hint = document.getElementById("timeHint");
   if (total > TIME_LIMIT_SEC) {
-    // 制限時間を超えた値が入っている＝時間切れのはず
-    hint.textContent = "制限時間(7分00秒)を超えています → 時間切れボタンを使ってください";
+    hint.textContent = "制限時間(7分)超過 → 時間切れボタンを使ってください";
     hint.className = "over";
   } else {
     hint.textContent = "制限時間 7分00秒";
@@ -1031,6 +1067,65 @@ const AXES = [
   { key: "balance_score",        name: "バランス", max: 15, na: true  },
 ];
 
+// 軸の内訳を描画する共通関数（結果画面と管理者詳細で共用）
+// 焦げ度合いには軽度/中度/重度のインジケーターも付ける
+function renderAxes(container, score) {
+  container.innerHTML = "";
+  const cutEnabled = !!score.cut_face_enabled;
+  AXES.forEach(a => {
+    const isNA = a.na && !cutEnabled;
+    const pts  = isNA ? 0 : (score[a.key] ?? 0);
+    const pct  = a.max > 0 ? (pts / a.max * 100) : 0;
+    let fillCls = "";
+    if (!isNA) { if (pct < 30) fillCls = "bad"; else if (pct < 60) fillCls = "low"; }
+    const div = document.createElement("div");
+    div.className = "axis" + (isNA ? " na" : "");
+    // 焦げ度合いの軽度/中度/重度インジケーター
+    let extra = "";
+    if (a.hasSeverity && !isNA) {
+      const sev  = Math.round((score.burn_severe_ratio   ?? 0) * 100);
+      const mod  = Math.round((score.burn_moderate_ratio ?? 0) * 100);
+      const mild = Math.round((score.burn_mild_ratio     ?? 0) * 100);
+      extra =
+        `<div class="sev-bars">` +
+          `<div class="sev-row"><span class="sev-label">重度</span><div class="sev-track"><div class="sev-fill bad"  style="width:${sev}%"></div></div><span class="sev-pct">${sev}%</span></div>` +
+          `<div class="sev-row"><span class="sev-label">中度</span><div class="sev-track"><div class="sev-fill low"  style="width:${mod}%"></div></div><span class="sev-pct">${mod}%</span></div>` +
+          `<div class="sev-row"><span class="sev-label">軽度</span><div class="sev-track"><div class="sev-fill good" style="width:${mild}%"></div></div><span class="sev-pct">${mild}%</span></div>` +
+        `</div>`;
+    }
+    div.innerHTML =
+      `<div class="axis-top">` +
+        `<span class="axis-name">${a.name}${isNA ? "（未実装）" : ""}</span>` +
+        `<span class="axis-pts">${pts.toFixed(1)} / ${a.max}</span>` +
+      `</div>` +
+      `<div class="axis-bar"><div class="axis-fill ${fillCls}" style="width:${pct}%"></div></div>` +
+      extra;
+    container.appendChild(div);
+  });
+  // 時間切れ / 所要時間
+  if (score.timed_out) {
+    const warn = document.createElement("div");
+    warn.className = "err-box"; warn.style.fontSize = "13px";
+    warn.innerHTML = "⏱ 時間切れ（7分以内に完了せず）のため時間0点";
+    container.appendChild(warn);
+  } else if (score.elapsed_sec != null) {
+    const m2 = Math.floor(score.elapsed_sec/60), sec = score.elapsed_sec%60;
+    const note = document.createElement("div");
+    note.style.cssText = "font-size:13px;color:#888;padding:4px 2px";
+    note.textContent = `所要時間 ${m2}分${String(sec).padStart(2,"0")}秒`;
+    container.appendChild(note);
+  }
+}
+
+// 焦げ段階マスク画像を指定要素に表示する
+function showSeverityImage(imgEl, wrapEl, recordKey) {
+  if (!imgEl || !recordKey) return;
+  imgEl.src = `${SUPA_URL}/storage/v1/object/${BUCKET}/results/${recordKey}_severity.png?t=${Date.now()}`;
+  imgEl.onload  = () => { if (wrapEl) wrapEl.style.display = "block"; };
+  imgEl.onerror = () => { if (wrapEl) wrapEl.style.display = "none"; };
+}
+
+
 function renderScore(s, recordKey) {
   document.getElementById("scoreWait").style.display = "none";
   document.getElementById("scoreBody").style.display = "flex";
@@ -1060,60 +1155,15 @@ function renderScore(s, recordKey) {
   img.onerror = () => { img.style.display = "none"; };
   img.style.display = "block";
 
-  // 軸ごとの内訳
-  const list = document.getElementById("axisList");
-  list.innerHTML = "";
-  const cutEnabled = !!s.cut_face_enabled;
-  AXES.forEach(a => {
-    const isNA = a.na && !cutEnabled;
-    const pts = isNA ? 0 : (s[a.key] ?? 0);
-    const pct = a.max > 0 ? (pts / a.max * 100) : 0;
-    let fillCls = "";
-    if (!isNA) {
-      if (pct < 30) fillCls = "bad";
-      else if (pct < 60) fillCls = "low";
-    }
-    const div = document.createElement("div");
-    div.className = "axis" + (isNA ? " na" : "");
-    // 焦げ度合いは軽度/中度/重度の内訳を追加表示
-    let extra = "";
-    if (a.hasSeverity && !isNA) {
-      const sev  = Math.round((s.burn_severe_ratio  ?? 0) * 100);
-      const mod  = Math.round((s.burn_moderate_ratio ?? 0) * 100);
-      const mild = Math.round((s.burn_mild_ratio     ?? 0) * 100);
-      extra =
-        `<div class="sev-bars">` +
-          `<div class="sev-row"><span class="sev-label">重度</span><div class="sev-track"><div class="sev-fill bad"  style="width:${sev}%"></div></div><span class="sev-pct">${sev}%</span></div>` +
-          `<div class="sev-row"><span class="sev-label">中度</span><div class="sev-track"><div class="sev-fill low"  style="width:${mod}%"></div></div><span class="sev-pct">${mod}%</span></div>` +
-          `<div class="sev-row"><span class="sev-label">軽度</span><div class="sev-track"><div class="sev-fill good" style="width:${mild}%"></div></div><span class="sev-pct">${mild}%</span></div>` +
-        `</div>`;
-    }
-    div.innerHTML =
-      `<div class="axis-top">` +
-        `<span class="axis-name">${a.name}${isNA ? "（未実装）" : ""}</span>` +
-        `<span class="axis-pts">${pts.toFixed(1)} / ${a.max}</span>` +
-      `</div>` +
-      `<div class="axis-bar"><div class="axis-fill ${fillCls}" style="width:${pct}%"></div></div>` +
-      extra;
-    list.appendChild(div);
-  });
+  // 軸ごとの内訳（焦げ度合いの軽度/中度/重度も含む）
+  renderAxes(document.getElementById("axisList"), s);
 
-  // 焦げ段階マスク画像（research_system が生成する severity PNG を表示）
-  const sevEl = document.getElementById("severityImg");
-  if (sevEl) {
-    sevEl.src = `${SUPA_URL}/storage/v1/object/${BUCKET}/results/${recordKey}_severity.png?t=${Date.now()}`;
-    sevEl.onerror = () => { sevEl.parentElement.style.display="none"; };
-    sevEl.parentElement.style.display = "block";
-  }
-
-  // 時間切れだった場合は明示する
-  if (s.timed_out) {
-    const warn = document.createElement("div");
-    warn.className = "err-box";
-    warn.style.fontSize = "13px";
-    warn.innerHTML = "⏱ 時間切れ（7分以内に完了せず）のため、時間スコアは0点です";
-    list.appendChild(warn);
-  }
+  // 焦げ段階マスク画像
+  showSeverityImage(
+    document.getElementById("severityImg"),
+    document.getElementById("severityWrap"),
+    recordKey
+  );
 }
 
 // ============================================================
@@ -1309,39 +1359,15 @@ async function openDetail(r) {
         ? `現在の上限 ${attainable}点（平滑度・バランスは割面解析の実装待ちのため0点）`
         : "";
 
-      // 軸内訳（スコア画面と同じ関数で描く）
-      axes.innerHTML = "";
-      const cutEnabled = !!score.cut_face_enabled;
-      AXES.forEach(a => {
-        const isNA = a.na && !cutEnabled;
-        const pts  = isNA ? 0 : (score[a.key] ?? 0);
-        const pct  = a.max > 0 ? (pts / a.max * 100) : 0;
-        let fillCls = "";
-        if (!isNA) { if (pct < 30) fillCls = "bad"; else if (pct < 60) fillCls = "low"; }
-        const div = document.createElement("div");
-        div.className = "axis" + (isNA ? " na" : "");
-        div.innerHTML =
-          `<div class="axis-top">` +
-            `<span class="axis-name">${a.name}${isNA ? "（未実装）" : ""}</span>` +
-            `<span class="axis-pts">${pts.toFixed(1)} / ${a.max}</span>` +
-          `</div>` +
-          `<div class="axis-bar"><div class="axis-fill ${fillCls}" style="width:${pct}%"></div></div>`;
-        axes.appendChild(div);
-      });
+      // 軸内訳（焦げ度合いの軽度/中度/重度も含む・共通関数）
+      renderAxes(axes, score);
 
-      // 時間切れ表示
-      if (score.timed_out) {
-        const warn = document.createElement("div");
-        warn.className = "err-box"; warn.style.fontSize = "13px";
-        warn.innerHTML = "⏱ 時間切れ（7分以内に完了せず）";
-        axes.appendChild(warn);
-      } else if (score.elapsed_sec != null) {
-        const m2 = Math.floor(score.elapsed_sec/60), sec=score.elapsed_sec%60;
-        const note = document.createElement("div");
-        note.style.cssText="font-size:13px;color:#888;padding:4px 2px";
-        note.textContent = `所要時間 ${m2}分${String(sec).padStart(2,"0")}秒`;
-        axes.appendChild(note);
-      }
+      // 焦げ段階マスク画像
+      showSeverityImage(
+        document.getElementById("detailSeverity"),
+        document.getElementById("detailSeverityWrap"),
+        r.record_key
+      );
     } else {
       axes.innerHTML = "<div style='color:#888;font-size:13px'>詳細データが見つかりません（採点結果のJSONがまだアップロードされていない可能性があります）</div>";
     }
@@ -1358,7 +1384,6 @@ function closeDetail() {
 //  初期化
 // ============================================================
 loadSettings();
-renderTime();
 </script>
 </body>
 </html>
