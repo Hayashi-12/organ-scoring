@@ -932,36 +932,52 @@ let isTimedOut = false;       // 時間切れかどうか
 
 // ── ドラムロール（ホイールピッカー）の構築 ──
 // スクロールで数字を選ぶ。中央に来た項目が選択値になる。
+// 無限ループ（20→0→1、59→0→1）にするため、項目を複数周分並べておき、
+// 端に近づいたら見た目が同じ中央の周へ瞬間的に戻す。
 const ITEM_H = 40;   // .drum-item の高さと一致させる
+const LOOPS = 50;    // 何周分並べるか（十分な余裕を持たせる）
 
 function buildDrum(el, count, current, onChange) {
   el.innerHTML = "";
-  for (let i = 0; i < count; i++) {
+  // count個の数字を LOOPS 周ぶん並べる
+  const total = count * LOOPS;
+  for (let i = 0; i < total; i++) {
     const d = document.createElement("div");
     d.className = "drum-item";
-    d.textContent = String(i).padStart(2, "0");
+    d.textContent = String(i % count).padStart(2, "0");
     el.appendChild(d);
   }
-  // 初期位置へスクロール
-  el.scrollTop = current * ITEM_H;
-  updateDrumActive(el);
 
-  // スクロールが止まったら中央の値を確定
+  // 中央の周から開始（上下に十分なループが残るように）
+  const midLoop = Math.floor(LOOPS / 2);
+  const startIdx = midLoop * count + current;
+  el.scrollTop = startIdx * ITEM_H;
+  updateDrumActive(el, count);
+
   let timer = null;
   el.addEventListener("scroll", () => {
-    updateDrumActive(el);
+    updateDrumActive(el, count);
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => {
-      // 最寄りの項目にスナップ
-      const idx = Math.round(el.scrollTop / ITEM_H);
-      el.scrollTo({ top: idx * ITEM_H, behavior: "smooth" });
-      onChange(idx);
-      updateDrumActive(el);
+      let idx = Math.round(el.scrollTop / ITEM_H);
+      const value = ((idx % count) + count) % count;
+
+      // 端に近づいていたら、同じ見た目の中央の周へ瞬間移動（ループの肝）
+      const loopNow = Math.floor(idx / count);
+      if (loopNow < 3 || loopNow > LOOPS - 3) {
+        idx = midLoop * count + value;
+        el.scrollTop = idx * ITEM_H;   // アニメなしで瞬間移動
+      } else {
+        // 最寄り項目にスナップ
+        el.scrollTo({ top: idx * ITEM_H, behavior: "smooth" });
+      }
+      onChange(value);
+      updateDrumActive(el, count);
     }, 120);
   });
 }
 
-function updateDrumActive(el) {
+function updateDrumActive(el, count) {
   const idx = Math.round(el.scrollTop / ITEM_H);
   [...el.children].forEach((c, i) => {
     c.classList.toggle("active", i === idx);
@@ -969,7 +985,7 @@ function updateDrumActive(el) {
 }
 
 function initDrums() {
-  // 分: 0〜20、秒: 0〜59
+  // 分: 0〜20、秒: 0〜59（どちらも無限ループ）
   buildDrum(document.getElementById("drumMin"), 21, tMin, v => { tMin = v; onTimeChange(); });
   buildDrum(document.getElementById("drumSec"), 60, tSec, v => { tSec = v; onTimeChange(); });
   onTimeChange();
