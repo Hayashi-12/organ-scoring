@@ -188,6 +188,10 @@ button{font-family:inherit}
 .rec-main{flex:1;min-width:0}
 .rec-id{font-size:15px;font-weight:600;color:#fff}
 .rec-meta{font-size:12px;color:#777;margin-top:2px}
+.info-panel{background:#1c1c1e;border:1px solid #2c2c2e;border-radius:11px;padding:10px 13px;display:flex;flex-direction:column;gap:7px;margin-top:2px}
+.info-row{display:flex;justify-content:space-between;font-size:13px}
+.info-k{color:#888}
+.info-v{font-weight:500}
 .rec-score{font-size:21px;font-weight:700;font-variant-numeric:tabular-nums;color:#34c759}
 .rec-grade{font-size:11px;color:#888;text-align:right;margin-top:2px}
 #admin>button{width:100%;min-height:52px;padding:15px;border-radius:13px;background:#1c1c1e;color:#fff;font-size:16px;font-weight:500;border:1px solid #333;cursor:pointer;display:block}
@@ -430,8 +434,8 @@ const GUARD = {
   // ── 形（縦横比）: 斜めから撮ると比が崩れるので角度ガードを兼ねる ──
   // 実測 1.33〜1.37（ブレ1.1%）と極めて安定。逸脱＝斜めから撮っている。
   ASPECT_TARGET: 1.35,
-  ASPECT_MIN: 1.20,
-  ASPECT_MAX: 1.50,
+  ASPECT_MIN: 1.05,
+  ASPECT_MAX: 1.75,
 
   // ── 明るさ（背景の白紙のV値。画面全体の平均ではない）──
   // 実測 202 / 225 / 218。照明を統制すればここは自然に揃うので、
@@ -853,9 +857,12 @@ async function capture() {
   // 時間だけを別送すると画像と対応づける手間が増えるので、
   // ファイル名に載せてしまうのが確実。
   const timeTag = isTimedOut ? "tTO" : `t${elapsedSec}`;
-  // ファイル名に 側・熟練度・時間 を埋め込む。PC側がこれを読んでCSVに記録する。
-  //   例: S001_left_novice_20260714_143022_t285.jpg
-  const recordKey = `${subjectId}_${selectedSide}_${selectedSkill}_${ts}_${timeTag}`;
+  // 制限時間タグ: L420=制限7分, Lno=制限なし
+  const limitSec = getLimitSec();
+  const limitTag = (limitSec === null) ? "Lno" : `L${limitSec}`;
+  // ファイル名に 側・熟練度・時間・制限時間 を埋め込む。PC側がこれを読んでCSVに記録する。
+  //   例: S001_left_novice_20260714_143022_t285_L420.jpg
+  const recordKey = `${subjectId}_${selectedSide}_${selectedSkill}_${ts}_${timeTag}_${limitTag}`;
   const filename = `${recordKey}.jpg`;
 
   try {
@@ -1230,19 +1237,39 @@ function renderAxes(container, score) {
       extra;
     container.appendChild(div);
   });
-  // 時間切れ / 所要時間
+
+  // ── 熟練度・所要時間・制限時間の情報パネル ──
+  const info = document.createElement("div");
+  info.className = "info-panel";
+  const rows = [];
+
+  // 熟練度
+  const skillMap = { novice: "初心者 (Novice)", intermediate: "中級者 (Interm.)", expert: "熟練者 (Expert)" };
+  if (score.skill_level && score.skill_level !== "unknown") {
+    rows.push(["熟練度", skillMap[score.skill_level] || score.skill_level]);
+  }
+
+  // 所要時間 / 時間切れ
   if (score.timed_out) {
-    const warn = document.createElement("div");
-    warn.className = "err-box"; warn.style.fontSize = "13px";
-    warn.innerHTML = "⏱ 時間切れ（7分以内に完了せず）のため時間0点";
-    container.appendChild(warn);
+    rows.push(["所要時間", "時間切れ（未完了）"]);
   } else if (score.elapsed_sec != null) {
     const m2 = Math.floor(score.elapsed_sec/60), sec = score.elapsed_sec%60;
-    const note = document.createElement("div");
-    note.style.cssText = "font-size:13px;color:#888;padding:4px 2px";
-    note.textContent = `所要時間 ${m2}分${String(sec).padStart(2,"0")}秒`;
-    container.appendChild(note);
+    rows.push(["所要時間", `${m2}分${String(sec).padStart(2,"0")}秒`]);
   }
+
+  // 制限時間
+  if (score.limit_sec === null || score.limit_sec === undefined) {
+    // limit_sec が明示的に null なら「制限なし」、キー自体がなければ表示しない
+    if ("limit_sec" in score) rows.push(["制限時間", "なし"]);
+  } else {
+    const lm = Math.floor(score.limit_sec/60);
+    rows.push(["制限時間", `${lm}分`]);
+  }
+
+  info.innerHTML = rows.map(([k,v]) =>
+    `<div class="info-row"><span class="info-k">${k}</span><span class="info-v">${v}</span></div>`
+  ).join("");
+  if (rows.length) container.appendChild(info);
 }
 
 // 焦げ段階マスク画像を指定要素に表示する
@@ -1400,15 +1427,24 @@ function renderAdmin() {
     const rankCls = (adminTab === "rank" && i < 3) ? "rec-rank top" : "rec-rank";
     const rankTxt = (adminTab === "rank") ? `${i+1}` : `${i+1}`;
 
+    const skillMap = { novice: "初心者", intermediate: "中級", expert: "熟練" };
     let meta = "";
+    // 熟練度
+    if (r.skill_level && r.skill_level !== "unknown") {
+      meta = skillMap[r.skill_level] || r.skill_level;
+    }
+    // 所要時間
     if (r.timed_out) {
-      meta = "時間切れ";
+      meta += (meta ? " ・ " : "") + "時間切れ";
     } else if (r.elapsed_sec != null) {
       const m = Math.floor(r.elapsed_sec / 60), s = r.elapsed_sec % 60;
-      meta = `${m}分${String(s).padStart(2,"0")}秒`;
+      meta += (meta ? " ・ " : "") + `${m}分${String(s).padStart(2,"0")}秒`;
     }
-    if (r.recorded_at) {
-      meta += (meta ? " ・ " : "") + r.recorded_at.slice(5, 16);
+    // 制限時間
+    if (r.limit_sec != null) {
+      meta += (meta ? " ・ " : "") + `制限${Math.floor(r.limit_sec/60)}分`;
+    } else if ("limit_sec" in r) {
+      meta += (meta ? " ・ " : "") + "制限なし";
     }
 
     div.innerHTML =
