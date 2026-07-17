@@ -26,6 +26,9 @@ button{font-family:inherit}
 #connStatus.ng{background:#2e1212;color:#ff6b6b}
 #connStatus.wait{background:#2e2a12;color:#f5a623}
 #sideToggle{display:flex;gap:8px;width:100%;max-width:340px}
+#sideSelect,#skillSelect{width:100%;max-width:340px;margin:4px 0}
+.back-btn{align-self:flex-start;background:transparent;border:none;color:#5ac8fa;font-size:15px;padding:6px 2px;cursor:pointer;margin-bottom:4px}
+.back-btn:active{opacity:0.6}
 #skillSelect{width:100%;max-width:340px;margin:4px 0}
 .skill-label{font-size:12px;color:#888;margin-bottom:8px;text-align:center}
 #skillBtns{display:flex;gap:8px}
@@ -234,13 +237,6 @@ button{font-family:inherit}
     <input id="inSubject" type="text" placeholder="例: S001" value="S001" autocomplete="off">
   </div>
   <div class="field">
-    <label>切除した側</label>
-    <div id="sideToggle">
-      <button id="sideLeft"  class="side-btn active" onclick="setSide('left')">左（Left）</button>
-      <button id="sideRight" class="side-btn"        onclick="setSide('right')">右（Right）</button>
-    </div>
-  </div>
-  <div class="field">
     <label>制限時間（実験ごとに設定）</label>
     <div id="limitRow">
       <button class="lim-btn" onclick="adjLimit(-1)">−</button>
@@ -291,6 +287,7 @@ button{font-family:inherit}
 
 <!-- ========== 時間入力（撮影の前に行う） ========== -->
 <div id="timeInput">
+  <button class="back-btn" onclick="show('setup')">← 戻る</button>
   <h2>所要時間</h2>
   <p class="sub">切除にかかった時間を選んでください</p>
 
@@ -308,6 +305,14 @@ button{font-family:inherit}
   </div>
 
   <div id="timeHint">制限時間 7分00秒</div>
+
+  <div id="sideSelect">
+    <div class="skill-label">切除した側</div>
+    <div id="sideToggle">
+      <button id="sideLeft"  class="side-btn active" onclick="setSide('left')">左（Left）</button>
+      <button id="sideRight" class="side-btn"        onclick="setSide('right')">右（Right）</button>
+    </div>
+  </div>
 
   <div id="skillSelect">
     <div class="skill-label">手術の熟練度</div>
@@ -360,6 +365,7 @@ button{font-family:inherit}
 
 <!-- ========== 管理者モード（iPad想定） ========== -->
 <div id="admin">
+  <button class="back-btn" onclick="show('setup')">← 戻る</button>
   <h2>採点結果 一覧</h2>
   <div id="adminTabs">
     <button class="tab active" id="tabOrder" onclick="switchTab('order')">採点順</button>
