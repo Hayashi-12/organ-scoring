@@ -26,6 +26,20 @@ button{font-family:inherit}
 #connStatus.ng{background:#2e1212;color:#ff6b6b}
 #connStatus.wait{background:#2e2a12;color:#f5a623}
 #sideToggle{display:flex;gap:8px;width:100%;max-width:340px}
+#skillSelect{width:100%;max-width:340px;margin:4px 0}
+.skill-label{font-size:12px;color:#888;margin-bottom:8px;text-align:center}
+#skillBtns{display:flex;gap:8px}
+.skill-btn{flex:1;padding:10px 4px;border-radius:11px;background:#1c1c1e;border:1px solid #333;color:#888;font-size:14px;font-weight:600;cursor:pointer;line-height:1.3}
+.skill-btn span{font-size:10px;font-weight:400;color:#666}
+.skill-btn.active{background:#0a2c1a;border-color:#34c759;color:#34c759}
+.skill-btn.active span{color:#2a8c4a}
+#limitRow{display:flex;gap:8px;align-items:center;width:100%;max-width:340px}
+.lim-btn{width:46px;height:46px;border-radius:11px;background:#1c1c1e;border:1px solid #333;color:#34c759;font-size:22px;font-weight:600;cursor:pointer;flex-shrink:0}
+.lim-btn:active{background:#2c2c2e}
+#limitVal{flex:1;text-align:center;font-size:18px;font-weight:600;min-width:60px}
+.lim-none{padding:0 12px;height:46px;border-radius:11px;background:#1c1c1e;border:1px solid #333;color:#888;font-size:13px;cursor:pointer;flex-shrink:0}
+.lim-none.active{background:#0a2c1a;border-color:#34c759;color:#34c759;font-weight:600}
+#limitNote{font-size:11px;color:#777;margin-top:6px;max-width:340px}
 .side-btn{flex:1;padding:11px;border-radius:11px;background:#1c1c1e;border:1px solid #333;color:#888;font-size:15px;cursor:pointer}
 .side-btn.active{background:#0a2c1a;border-color:#34c759;color:#34c759;font-weight:600}
 #startBtn{width:100%;max-width:340px;padding:15px;border-radius:14px;background:#34c759;color:#fff;font-size:16px;font-weight:600;border:none;cursor:pointer;transition:opacity 0.15s}
@@ -226,6 +240,16 @@ button{font-family:inherit}
       <button id="sideRight" class="side-btn"        onclick="setSide('right')">右（Right）</button>
     </div>
   </div>
+  <div class="field">
+    <label>制限時間（実験ごとに設定）</label>
+    <div id="limitRow">
+      <button class="lim-btn" onclick="adjLimit(-1)">−</button>
+      <div id="limitVal">7分</div>
+      <button class="lim-btn" onclick="adjLimit(1)">＋</button>
+      <button id="noLimitBtn" class="lim-none" onclick="toggleNoLimit()">制限なし</button>
+    </div>
+    <div id="limitNote">制限時間を過ぎると時間スコアは一律5点になります</div>
+  </div>
 
   <div id="connStatus" class="ng">未接続</div>
   <button id="startBtn" onclick="start()" disabled>カメラを起動</button>
@@ -284,6 +308,15 @@ button{font-family:inherit}
   </div>
 
   <div id="timeHint">制限時間 7分00秒</div>
+
+  <div id="skillSelect">
+    <div class="skill-label">手術の熟練度</div>
+    <div id="skillBtns">
+      <button class="skill-btn active" data-skill="novice"       onclick="setSkill('novice')">初心者<br><span>Novice</span></button>
+      <button class="skill-btn"        data-skill="intermediate" onclick="setSkill('intermediate')">中級者<br><span>Interm.</span></button>
+      <button class="skill-btn"        data-skill="expert"       onclick="setSkill('expert')">熟練者<br><span>Expert</span></button>
+    </div>
+  </div>
 
   <button id="timeOkBtn" onclick="confirmTime(false)">この時間で撮影する</button>
   <button id="timeoutBtn" onclick="confirmTime(true)">⏱ 時間切れ（未完了）</button>
@@ -428,6 +461,9 @@ function loadSettings() {
     if (s.key) document.getElementById("inKey").value = s.key;
     if (s.subject) document.getElementById("inSubject").value = s.subject;
     if (s.side) setSide(s.side);
+    if (typeof s.limitMin === "number") limitMin = s.limitMin;
+    if (typeof s.noLimit === "boolean") noLimit = s.noLimit;
+    renderLimit();
     checkConnection();
   } catch(e) {}
 }
@@ -437,7 +473,9 @@ function saveSettings() {
     url: document.getElementById("inUrl").value.trim(),
     key: document.getElementById("inKey").value.trim(),
     subject: document.getElementById("inSubject").value.trim(),
-    side: selectedSide
+    side: selectedSide,
+    limitMin: limitMin,
+    noLimit: noLimit
   }));
 }
 
@@ -515,6 +553,7 @@ function start() {
   saveSettings();
   // 前回の入力をリセット
   tMin = 5; tSec = 0; isTimedOut = false; elapsedSec = null;
+  setSkill("novice");   // 熟練度は毎回 novice から選び直す
   show("timeInput");
   // 画面表示後にドラムを構築（scrollTop は表示後でないと効かない）
   requestAnimationFrame(() => initDrums());
@@ -808,7 +847,9 @@ async function capture() {
   // 時間だけを別送すると画像と対応づける手間が増えるので、
   // ファイル名に載せてしまうのが確実。
   const timeTag = isTimedOut ? "tTO" : `t${elapsedSec}`;
-  const recordKey = `${subjectId}_${selectedSide}_${ts}_${timeTag}`;
+  // ファイル名に 側・熟練度・時間 を埋め込む。PC側がこれを読んでCSVに記録する。
+  //   例: S001_left_novice_20260714_143022_t285.jpg
+  const recordKey = `${subjectId}_${selectedSide}_${selectedSkill}_${ts}_${timeTag}`;
   const filename = `${recordKey}.jpg`;
 
   try {
@@ -838,6 +879,7 @@ async function capture() {
       timestamp: now.toISOString(),
       filename: filename,
       elapsed_sec: elapsedSec,
+      skill_level: selectedSkill,
       timed_out: isTimedOut,
       image_width: crop.w,
       image_height: crop.h,
@@ -919,16 +961,68 @@ function retake() {
 }
 
 // ============================================================
+//  制限時間の設定（実験ごとに可変）
+// ============================================================
+//  制限時間はセットアップ画面で運営者が設定し、全被験者に適用する。
+//  「制限なし」も選べる。制限時間を過ぎた場合、時間スコアは一律5点。
+//  制限なしの場合は5点ルールを使わず、ずっと線形で採点する。
+let limitMin = 7;             // 制限時間（分）。デフォルト7分
+let noLimit = false;          // 制限なしモード
+
+function adjLimit(delta) {
+  noLimit = false;
+  limitMin = Math.max(1, Math.min(60, limitMin + delta));
+  renderLimit();
+}
+
+function toggleNoLimit() {
+  noLimit = !noLimit;
+  renderLimit();
+}
+
+function renderLimit() {
+  const val = document.getElementById("limitVal");
+  const btn = document.getElementById("noLimitBtn");
+  const note = document.getElementById("limitNote");
+  if (noLimit) {
+    val.textContent = "制限なし";
+    val.style.opacity = "0.4";
+    btn.classList.add("active");
+    note.textContent = "制限時間なし：所要時間に応じて採点します（8分で満点、以降1分ごとに1点減点）";
+  } else {
+    val.textContent = `${limitMin}分`;
+    val.style.opacity = "1";
+    btn.classList.remove("active");
+    note.textContent = `制限時間 ${limitMin}分を過ぎると時間スコアは一律5点になります`;
+  }
+  saveSettings();
+}
+
+// 現在の制限時間（秒）。制限なしなら null
+function getLimitSec() {
+  return noLimit ? null : limitMin * 60;
+}
+
+// ============================================================
+//  熟練度の選択（時間入力画面で毎回選ぶ）
+// ============================================================
+//  手術の熟練度を被験者ごとに記録する。CSVの skill_level 列に入り、
+//  熟練度と各軸の値の相関を分析するのに使う。
+let selectedSkill = "novice";
+
+function setSkill(skill) {
+  selectedSkill = skill;
+  document.querySelectorAll(".skill-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.skill === skill);
+  });
+}
+
+// ============================================================
 //  時間入力（撮影の前に行う）
 // ============================================================
-//  制限時間は7分。熟練者でも通常8〜10分かかる作業なので、
-//  7分で完了できなければ「時間切れ」ボタンを押してもらう。
-//  時間切れの場合、時間スコアは0点になる。
-const TIME_LIMIT_SEC = 420;   // 7分
-
 let tMin = 5, tSec = 0;
 let elapsedSec = null;        // 入力された所要時間（秒）
-let isTimedOut = false;       // 時間切れかどうか
+let isTimedOut = false;       // 制限時間を過ぎたか
 
 // ── ドラムロール（ホイールピッカー）の構築 ──
 // スクロールで数字を選ぶ。中央に来た項目が選択値になる。
@@ -994,22 +1088,34 @@ function initDrums() {
 function onTimeChange() {
   const total = tMin * 60 + tSec;
   const hint = document.getElementById("timeHint");
-  if (total > TIME_LIMIT_SEC) {
-    hint.textContent = "制限時間(7分)超過 → 時間切れボタンを使ってください";
+  const limitSec = getLimitSec();
+
+  if (limitSec === null) {
+    // 制限なし
+    hint.textContent = "制限時間なし";
+    hint.className = "";
+  } else if (total > limitSec) {
+    hint.textContent = `制限時間(${limitMin}分)超過 → 時間切れボタンを使ってください`;
     hint.className = "over";
   } else {
-    hint.textContent = "制限時間 7分00秒";
+    hint.textContent = `制限時間 ${limitMin}分00秒`;
     hint.className = "";
   }
+
+  // 時間切れボタンは、制限なしのときは隠す
+  const toBtn = document.getElementById("timeoutBtn");
+  if (toBtn) toBtn.style.display = (limitSec === null) ? "none" : "block";
 }
 
 function confirmTime(timedOut) {
   isTimedOut = timedOut;
   elapsedSec = timedOut ? null : (tMin * 60 + tSec);
 
-  // 時間切れでないのに制限時間を超えている場合は、入力ミスの可能性が高い
-  if (!timedOut && elapsedSec > TIME_LIMIT_SEC) {
-    if (!confirm("制限時間(7分)を超えています。\n時間切れとして記録しますか?")) {
+  const limitSec = getLimitSec();
+
+  // 制限時間ありで、時間切れでないのに制限を超えている → 入力ミスか確認
+  if (!timedOut && limitSec !== null && elapsedSec > limitSec) {
+    if (!confirm(`制限時間(${limitMin}分)を超えています。\n時間切れ（時間スコア一律5点）として記録しますか?`)) {
       return;   // 入力し直してもらう
     }
     isTimedOut = true;
