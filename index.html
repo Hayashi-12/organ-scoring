@@ -691,17 +691,6 @@ function quickCheck(imageData, w, h) {
   }
 
   if (organPx > 20) {
-    // ── 3. 形（縦横比）＝ 傾きガードを兼ねる ──
-    const bw = organMaxX - organMinX, bh = organMaxY - organMinY;
-    const aspect = bh > 0 ? bw / bh : 0;
-    if (aspect < GUARD.ASPECT_MIN) {
-      checks["向き"] = { ok: false, msg: `臓器を横向きにしてください (${aspect.toFixed(2)})` };
-    } else if (aspect > GUARD.ASPECT_MAX) {
-      checks["向き"] = { ok: false, msg: `斜めから撮らず真上から (${aspect.toFixed(2)})` };
-    } else {
-      checks["向き"] = { ok: true, msg: `向きOK (${aspect.toFixed(2)})` };
-    }
-
     // ── 4. 白飛び（鏡面反射）──
     const blowRatio = blowoutPx / organPx;
     if (blowRatio > GUARD.BLOWOUT_MAX_RATIO) {
@@ -1275,9 +1264,23 @@ function renderAxes(container, score) {
 // 焦げ段階マスク画像を指定要素に表示する
 function showSeverityImage(imgEl, wrapEl, recordKey) {
   if (!imgEl || !recordKey) return;
-  imgEl.src = `${SUPA_URL}/storage/v1/object/${BUCKET}/results/${recordKey}_severity.png?t=${Date.now()}`;
-  imgEl.onload  = () => { if (wrapEl) wrapEl.style.display = "block"; };
-  imgEl.onerror = () => { if (wrapEl) wrapEl.style.display = "none"; };
+  const url = `${SUPA_URL}/storage/v1/object/${BUCKET}/results/${recordKey}_severity.png?t=${Date.now()}`;
+  console.log("[severity] loading:", url);
+  imgEl.src = url;
+  imgEl.onload  = () => {
+    console.log("[severity] loaded OK");
+    if (wrapEl) wrapEl.style.display = "block";
+  };
+  imgEl.onerror = () => {
+    console.warn("[severity] FAILED to load:", url);
+    if (wrapEl) wrapEl.style.display = "none";
+    // フォールバック: /object/public/ で試す
+    const pubUrl = `${SUPA_URL}/storage/v1/object/public/${BUCKET}/results/${recordKey}_severity.png?t=${Date.now()}`;
+    console.log("[severity] trying public URL:", pubUrl);
+    imgEl.onerror = () => console.warn("[severity] public URL also failed");
+    imgEl.onload  = () => { console.log("[severity] public URL OK"); if(wrapEl) wrapEl.style.display="block"; };
+    imgEl.src = pubUrl;
+  };
 }
 
 
