@@ -10,7 +10,7 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:-apple-system,sans-serif;background:#0a0a0a;color:#fff}
 /* 全画面共通: fixed で body の overflow に依存しない */
-#setup,#scanner,#uploading,#timeInput,#score,#admin,#adminDetail,#result,#tumorCapture,#tumorScore,#shootSelect{display:none;position:fixed;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;flex-direction:column;align-items:stretch;padding:1.2rem;padding-top:max(env(safe-area-inset-top),1.2rem);padding-bottom:calc(env(safe-area-inset-bottom)+1.5rem);gap:0.75rem}
+#setup,#scanner,#uploading,#timeInput,#score,#admin,#adminDetail,#result,#tumorCapture,#tumorScore,#shootSelect,#cutfacePrompt{display:none;position:fixed;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;flex-direction:column;align-items:stretch;padding:1.2rem;padding-top:max(env(safe-area-inset-top),1.2rem);padding-bottom:calc(env(safe-area-inset-bottom)+1.5rem);gap:0.75rem}
 button{font-family:inherit}
 
 /* ===== セットアップ画面 ===== */
@@ -271,15 +271,33 @@ button{font-family:inherit}
 /* 摘出面と同じ横長ガイド。割面は余白を使わず、この枠内をそのまま保存する */
 #tumorGuide{
   position:absolute;
-  top:50%;
+  top:58%;
   left:50%;
-  transform:translate(-50%,-52%);
-  width:86%;
-  aspect-ratio:1.35;
+  transform:translate(-50%,-50%);
+  width:88%;
+  aspect-ratio:2/1;
   border-radius:10px;
   border:2.5px solid #0a84ff;
   pointer-events:none;
   z-index:3;
+}
+#tumorIdealArc{
+  position:absolute;
+  left:3%;
+  right:3%;
+  bottom:5%;
+  height:90%;
+  border:2px dashed rgba(90,200,250,0.75);
+  border-bottom:none;
+  border-radius:50% 50% 0 0 / 100% 100% 0 0;
+}
+#tumorBaseLine{
+  position:absolute;
+  left:3%;
+  right:3%;
+  bottom:5%;
+  height:2px;
+  background:rgba(255,214,10,0.9);
 }
 #tumorCrossH,#tumorCrossV{
   position:absolute;
@@ -413,8 +431,8 @@ button{font-family:inherit}
 <div id="setup">
   <h1>撮影ガイド</h1>
   <p class="desc">
-    模擬臓器をガイド枠に合わせて撮影すると、<br>
-    自動的にPCに転送されます。
+    摘出面と割面を順番に撮影すると、<br>
+    6軸・100点満点で自動評価します。
   </p>
 
   <div class="field">
@@ -441,7 +459,7 @@ button{font-family:inherit}
   </div>
 
   <div id="connStatus" class="ng">未接続</div>
-  <button id="startBtn" onclick="start()" disabled>カメラを起動</button>
+  <button id="startBtn" onclick="start()" disabled>2枚の撮影を開始</button>
   <div id="adminLink" onclick="openAdmin()">採点結果の一覧を見る（管理者）</div>
 </div>
 
@@ -489,6 +507,19 @@ button{font-family:inherit}
       <div id="captureInner"></div>
     </button>
   </div>
+</div>
+
+
+<!-- ========== 割面撮影への案内 ========== -->
+<div id="cutfacePrompt">
+  <div class="step-badge">摘出面の送信完了・撮影 1/2</div>
+  <h2>次に割面を撮影します</h2>
+  <p>
+    切除片を割り、断面をカメラへ正対させてください。<br>
+    割面の左右端を基準線に合わせ、余白を入れず撮影します。
+  </p>
+  <button id="cutfaceNextBtn" onclick="startTumor()">割面撮影へ進む</button>
+  <button id="organAgainBtn" onclick="startCamera()">摘出面を撮り直す</button>
 </div>
 
 <!-- ========== アップロード中 ========== -->
@@ -552,6 +583,13 @@ button{font-family:inherit}
     <div id="scoreCap"></div>
     <img id="radarImg" alt="レーダーチャート">
     <div id="axisList"></div>
+
+    <div id="cutfaceVizWrap" style="display:none">
+      <div style="font-size:12px;color:#888;margin-bottom:6px">
+        割面解析（緑=実輪郭 / 青=理想半円 / 黄=基準線）
+      </div>
+      <img id="cutfaceVizImg" alt="割面解析" style="width:100%;border-radius:12px">
+    </div>
     <div id="severityWrap" style="display:none">
       <div style="font-size:12px;color:#888;margin-bottom:6px">焦げ段階マスク（重度=赤 / 中度=橙 / 軽度=黄）</div>
       <img id="severityImg" alt="焦げ段階" style="width:100%;border-radius:12px">
@@ -580,7 +618,7 @@ button{font-family:inherit}
 <div id="tumorCapture">
   <div id="tumorViewfinder">
     <button class="camera-back-btn" onclick="backFromTumorCamera()">← 戻る</button>
-    <div id="tumorTitleBadge">割面撮影</div>
+    <div id="tumorTitleBadge">撮影 2/2・割面</div>
 
     <video id="tumorVideo" autoplay playsinline muted style="display:none"></video>
     <img id="tumorPreviewImg" alt="割面プレビュー" style="display:none">
@@ -593,11 +631,13 @@ button{font-family:inherit}
     <div id="tumorGuide">
       <div class="co tl"></div><div class="co tr"></div>
       <div class="co bl"></div><div class="co br"></div>
+      <div id="tumorIdealArc"></div>
+      <div id="tumorBaseLine"></div>
     </div>
     <div id="tumorCrossH"></div>
     <div id="tumorCrossV"></div>
 
-    <div id="tumorHint">割面を枠いっぱいに合わせてください</div>
+    <div id="tumorHint">左右端を黄色線の両端に合わせ、断面を正面から撮影</div>
 
     <button id="tumorCaptureBtn" onclick="captureTumorPhoto()" aria-label="撮影"></button>
 
@@ -673,6 +713,13 @@ button{font-family:inherit}
   <h3 id="detailTitle">—</h3>
   <img id="detailRadar" alt="レーダー">
   <div id="detailAxes"></div>
+
+  <div id="detailCutfaceWrap" style="display:none">
+    <div style="font-size:12px;color:#888;margin-bottom:6px">
+      割面解析（緑=実輪郭 / 青=理想半円 / 黄=基準線）
+    </div>
+    <img id="detailCutface" alt="割面解析" style="width:100%;border-radius:12px">
+  </div>
   <div id="detailSeverityWrap" style="display:none">
     <div style="font-size:12px;color:#888;margin-bottom:6px">焦げ段階マスク（重度=赤 / 中度=橙 / 軽度=黄）</div>
     <img id="detailSeverity" alt="焦げ段階" style="width:100%;border-radius:12px">
@@ -696,6 +743,7 @@ let SUPA_URL = "", SUPA_KEY = "", BUCKET = "scans";
 let subjectId = "", videoStream = null, loopId = null;
 let tumorStream = null, tumorPhotoBlob = null, tumorPhotoUrl = "";
 let preferredCameraDeviceId = "";
+let captureSessionKey = "";
 let stableCount = 0, shotNumber = 0;
 const STABLE_NEED = 18; // 約3.6秒（200ms × 18）
 
@@ -903,13 +951,13 @@ function clearTumorPhoto() {
 function backFromOrganCamera() {
   stopOrganCamera();
   stableCount = 0;
-  show("shootSelect");
+  show("timeInput");
 }
 
 function backFromTumorCamera() {
   stopTumorCamera();
   clearTumorPhoto();
-  show("shootSelect");
+  show("cutfacePrompt");
 }
 
 // ============================================================
@@ -923,6 +971,7 @@ function start() {
   saveSettings();
   // 前回の入力をリセット
   tMin = 5; tSec = 0; isTimedOut = false; elapsedSec = null;
+  captureSessionKey = "";
   setSkill("novice");   // 熟練度は毎回 novice から選び直す
   show("timeInput");
   // 画面表示後にドラムを構築（scrollTop は表示後でないと効かない）
@@ -943,7 +992,7 @@ async function startCamera() {
     await video.play();
 
     document.getElementById("subjectBadge").textContent =
-      subjectId + " (" + selectedSide + ")";
+      "撮影 1/2・" + subjectId + " (" + selectedSide + ")";
     show("scanner");
     stableCount = 0;
     loopId = setInterval(analyzeFrame, 200);
@@ -1161,6 +1210,23 @@ function getCropRect(videoW, videoH) {
 // ============================================================
 //  撮影 → クロップ → Supabaseにアップロード
 // ============================================================
+function createCaptureSessionKey() {
+  const now = new Date();
+  const timestamp =
+    now.getFullYear().toString() +
+    String(now.getMonth() + 1).padStart(2, "0") +
+    String(now.getDate()).padStart(2, "0") + "_" +
+    String(now.getHours()).padStart(2, "0") +
+    String(now.getMinutes()).padStart(2, "0") +
+    String(now.getSeconds()).padStart(2, "0");
+
+  const timeTag = isTimedOut ? "tTO" : `t${elapsedSec}`;
+  const limitSec = getLimitSec();
+  const limitTag = limitSec === null ? "Lno" : `L${limitSec}`;
+
+  return `${subjectId}_${selectedSide}_${selectedSkill}_${timestamp}_${timeTag}_${limitTag}`;
+}
+
 async function capture() {
   if (stableCount < STABLE_NEED) return;
 
@@ -1194,27 +1260,12 @@ async function capture() {
   // クロップ画像をJPEGに変換
   const blob = await new Promise(r => cropCanvas.toBlob(r, "image/jpeg", 0.92));
 
-  // ファイル名: S001_20260615_143022.jpg
   const now = new Date();
-  const ts = now.getFullYear().toString() +
-    String(now.getMonth()+1).padStart(2,"0") +
-    String(now.getDate()).padStart(2,"0") + "_" +
-    String(now.getHours()).padStart(2,"0") +
-    String(now.getMinutes()).padStart(2,"0") +
-    String(now.getSeconds()).padStart(2,"0");
-  // 所要時間をファイル名に埋め込む。
-  //   _t285 → 285秒で完了 /  _tTO → 時間切れ
-  // PC側(auto_evaluate.py)はこれを読んで時間スコアを計算する。
-  // 時間だけを別送すると画像と対応づける手間が増えるので、
-  // ファイル名に載せてしまうのが確実。
-  const timeTag = isTimedOut ? "tTO" : `t${elapsedSec}`;
-  // 制限時間タグ: L420=制限7分, Lno=制限なし
-  const limitSec = getLimitSec();
-  const limitTag = (limitSec === null) ? "Lno" : `L${limitSec}`;
-  // ファイル名に 側・熟練度・時間・制限時間 を埋め込む。PC側がこれを読んでCSVに記録する。
-  //   例: S001_left_novice_20260714_143022_t285_L420.jpg
-  const recordKey = `${subjectId}_${selectedSide}_${selectedSkill}_${ts}_${timeTag}_${limitTag}`;
-  const filename = `${recordKey}.jpg`;
+  if (!captureSessionKey) {
+    captureSessionKey = createCaptureSessionKey();
+  }
+  const recordKey = captureSessionKey;
+  const filename = `${recordKey}_organ.jpg`;
 
   try {
     // ── 画像をSupabase Storageにアップロード ──
@@ -1242,6 +1293,8 @@ async function capture() {
       subject_id: subjectId,
       timestamp: now.toISOString(),
       filename: filename,
+      record_key: recordKey,
+      capture_type: "organ",
       elapsed_sec: elapsedSec,
       skill_level: selectedSkill,
       timed_out: isTimedOut,
@@ -1267,15 +1320,8 @@ async function capture() {
       }
     );
 
-    // 成功 → 採点結果の到着を待つ（ポーリング）
-    shotNumber++;
-
-    // 被験者IDを自動インクリメント（S001 → S002）
-    incrementSubjectId();
-
-    // PC側が採点を終えて results/<recordKey>.json を置くのを待ち、
-    // 届いたらこの端末（iPhone）に点数を表示する。
-    startPolling(recordKey);
+    // 摘出面だけでは採点を開始せず、同じrecord_keyで割面を撮影する。
+    show("cutfacePrompt");
 
   } catch(e) {
     show("result");
@@ -1311,7 +1357,7 @@ function show(id) {
 
   ["setup", "scanner", "uploading", "result",
    "timeInput", "score", "admin",
-   "tumorCapture", "tumorScore", "shootSelect"].forEach(s => {
+   "tumorCapture", "tumorScore", "shootSelect", "cutfacePrompt"].forEach(s => {
     const el = document.getElementById(s);
     if (el) el.style.display = "none";
   });
@@ -1327,6 +1373,7 @@ function retake() {
   stopOrganCamera();
   stopTumorCamera();
   clearTumorPhoto();
+  captureSessionKey = "";
   show("setup");
   document.getElementById("subjectBadge").textContent = subjectId;
   checkConnection();
@@ -1493,8 +1540,9 @@ function confirmTime(timedOut) {
     isTimedOut = true;
     elapsedSec = null;
   }
-  // 時間確定後、摘出面か割面かを選んでもらう
-  show("shootSelect");
+  // 同じ被験者について、摘出面→割面の順に2枚撮影する。
+  captureSessionKey = createCaptureSessionKey();
+  startCamera();
 }
 
 function doStartCamera() { startCamera(); }  // 摘出面
@@ -1530,7 +1578,7 @@ function resetTumorCaptureUI() {
   crossH.style.display = "block";
   crossV.style.display = "block";
   hint.style.display = "block";
-  hint.textContent = "割面を枠いっぱいに合わせてください";
+  hint.textContent = "左右端を黄色線の両端に合わせ、断面を正面から撮影";
 }
 
 async function startTumor() {
@@ -1575,25 +1623,23 @@ function openTumorFileCamera() {
 }
 
 function getTumorCropRect(videoW, videoH) {
-  // 摘出面と同じガイド幅・縦横比を使用する。
-  // 割面では周辺余白を評価に使わないため、マージンは付けない。
+  // 割面の理想形は半円なので、保存領域は横:縦=2:1とする。
+  // ガイド枠内を余白なしで保存する。
   const isPortrait = videoH > videoW;
   const frameW = isPortrait ? videoW : videoH;
   const frameH = isPortrait ? videoH : videoW;
 
-  const boxW = frameW * 0.86;
-  const boxH = boxW / 1.35;
+  const boxW = frameW * 0.88;
+  const boxH = boxW / 2.0;
   const cx = frameW / 2;
-  const cy = frameH * 0.48;
+  const cy = frameH * 0.58;
 
   const x = Math.max(0, Math.round(cx - boxW / 2));
   const y = Math.max(0, Math.round(cy - boxH / 2));
   const w = Math.min(frameW - x, Math.round(boxW));
   const h = Math.min(frameH - y, Math.round(boxH));
 
-  if (isPortrait) {
-    return { x, y, w, h };
-  }
+  if (isPortrait) return { x, y, w, h };
   return { x: y, y: x, w: h, h: w };
 }
 
@@ -1719,25 +1765,18 @@ async function uploadTumor() {
 
   show("uploading");
 
-  const now = new Date();
-  const ts =
-    now.getFullYear().toString() +
-    String(now.getMonth() + 1).padStart(2, "0") +
-    String(now.getDate()).padStart(2, "0") + "_" +
-    String(now.getHours()).padStart(2, "0") +
-    String(now.getMinutes()).padStart(2, "0") +
-    String(now.getSeconds()).padStart(2, "0");
+  if (!captureSessionKey) {
+    alert("撮影セッションが見つかりません。摘出面から撮り直してください。");
+    show("timeInput");
+    return;
+  }
 
-  const timeTag = isTimedOut ? "tTO" : `t${elapsedSec}`;
-  const limitSec = getLimitSec();
-  const limitTag = limitSec === null ? "Lno" : `L${limitSec}`;
-  const recordKey =
-    `${subjectId}_${selectedSide}_${selectedSkill}_${ts}_${timeTag}_${limitTag}_cutface`;
-  const filename = `${recordKey}.jpg`;
+  const recordKey = captureSessionKey;
+  const filename = `${recordKey}_cutface.jpg`;
 
   try {
     const response = await fetch(
-      `${SUPA_URL}/storage/v1/object/${BUCKET}/cutface/${filename}`,
+      `${SUPA_URL}/storage/v1/object/${BUCKET}/${filename}`,
       {
         method: "POST",
         headers: {
@@ -1756,15 +1795,11 @@ async function uploadTumor() {
     }
 
     clearTumorPhoto();
-    show("result");
-    document.getElementById("resultTitle").textContent = "割面撮影完了";
-    document.getElementById("resultContent").innerHTML =
-      `<div class="ok-box">` +
-        `割面画像をアップロードしました。` +
-        `<strong>cutface/${filename}</strong>` +
-      `</div>`;
-    document.getElementById("shotCount").textContent =
-      "割面画像は摘出面とは別フォルダに保存されます";
+    shotNumber++;
+
+    // 2枚が揃ったので統合採点を開始する。
+    incrementSubjectId();
+    startPolling(recordKey);
   } catch (e) {
     show("result");
     document.getElementById("resultTitle").textContent = "エラー";
@@ -1831,14 +1866,14 @@ async function fetchScore(recordKey) {
   }
 }
 
-// 評価軸の表示定義（割面2軸は未実装なので N/A 表示）
+// 摘出面4軸＋割面2軸の統合評価
 const AXES = [
   { key: "residual_tumor_score", name: "残存腫瘍", max: 25, na: false },
   { key: "char_severity_score",  name: "焦げ度合", max: 20, na: false, hasSeverity: true },
   { key: "circularity_score",    name: "円形度",   max: 10, na: false },
   { key: "time_score",           name: "時間",     max: 10, na: false },
-  { key: "smoothness_score",     name: "平滑度",   max: 20, na: true  },
-  { key: "balance_score",        name: "バランス", max: 15, na: true  },
+  { key: "smoothness_score",     name: "平滑度",   max: 20, na: false },
+  { key: "balance_score",        name: "バランス", max: 15, na: false },
 ];
 
 // 軸の内訳を描画する共通関数（結果画面と管理者詳細で共用）
@@ -1934,6 +1969,30 @@ function showSeverityImage(imgEl, wrapEl, recordKey) {
 }
 
 
+function showCutfaceImage(imgEl, wrapEl, recordKey) {
+  if (!imgEl || !recordKey) return;
+
+  const privateUrl =
+    `${SUPA_URL}/storage/v1/object/${BUCKET}/results/${recordKey}_cutface.png?t=${Date.now()}`;
+  imgEl.src = privateUrl;
+
+  imgEl.onload = () => {
+    if (wrapEl) wrapEl.style.display = "block";
+  };
+  imgEl.onerror = () => {
+    const publicUrl =
+      `${SUPA_URL}/storage/v1/object/public/${BUCKET}/results/${recordKey}_cutface.png?t=${Date.now()}`;
+    imgEl.onerror = () => {
+      if (wrapEl) wrapEl.style.display = "none";
+    };
+    imgEl.onload = () => {
+      if (wrapEl) wrapEl.style.display = "block";
+    };
+    imgEl.src = publicUrl;
+  };
+}
+
+
 function renderScore(s, recordKey) {
   document.getElementById("scoreWait").style.display = "none";
   document.getElementById("scoreBody").style.display = "flex";
@@ -1949,13 +2008,8 @@ function renderScore(s, recordKey) {
   document.getElementById("totalScore").innerHTML =
     `${(s.total_score ?? 0).toFixed(1)}<span class="max">/100</span>`;
 
-  // 割面が未実装の間は上限が65点であることを明示する。
-  // これを書かないと「なぜ満点が取れないのか」が伝わらない。
-  const cap = s.attainable_points ?? 100;
   const capEl = document.getElementById("scoreCap");
-  capEl.textContent = (cap < 100)
-    ? `現在の上限 ${cap}点（平滑度・バランスは割面解析の実装待ちのため0点）`
-    : "";
+  capEl.textContent = "";
 
   // レーダーチャート
   const img = document.getElementById("radarImg");
@@ -1965,6 +2019,13 @@ function renderScore(s, recordKey) {
 
   // 軸ごとの内訳（焦げ度合いの軽度/中度/重度も含む）
   renderAxes(document.getElementById("axisList"), s);
+
+  // 割面解析画像
+  showCutfaceImage(
+    document.getElementById("cutfaceVizImg"),
+    document.getElementById("cutfaceVizWrap"),
+    recordKey
+  );
 
   // 焦げ段階マスク画像
   showSeverityImage(
@@ -2171,13 +2232,17 @@ async function openDetail(r) {
     const score = res.ok ? await res.json() : null;
     if (score) {
       // 上限説明
-      const attainable = score.attainable_points ?? 100;
-      cap.textContent = attainable < 100
-        ? `現在の上限 ${attainable}点（平滑度・バランスは割面解析の実装待ちのため0点）`
-        : "";
+      cap.textContent = "";
 
       // 軸内訳（焦げ度合いの軽度/中度/重度も含む・共通関数）
       renderAxes(axes, score);
+
+      // 割面解析画像
+      showCutfaceImage(
+        document.getElementById("detailCutface"),
+        document.getElementById("detailCutfaceWrap"),
+        r.record_key
+      );
 
       // 焦げ段階マスク画像
       showSeverityImage(
