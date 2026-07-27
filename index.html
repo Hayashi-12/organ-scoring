@@ -231,20 +231,156 @@ button{font-family:inherit}
 .shoot-label{font-size:18px;font-weight:600}
 .shoot-sub{font-size:13px;color:#888}
 #tumorBtn{width:100%;max-width:340px;padding:14px;border-radius:13px;background:#1c1c1e;border:1px solid #444;color:#aaa;font-size:15px;cursor:pointer;margin-top:0}
-#tumorCapture{align-items:center}
-#tumorCapture h2{font-size:20px;font-weight:600}
-#tumorPreview{width:100%;max-width:420px;aspect-ratio:4/3;background:#1c1c1e;border:2px dashed #333;border-radius:14px;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;margin:0.5rem 0}
-#tumorPreview:active{opacity:0.8}
-#tumorPlaceholder{display:flex;flex-direction:column;align-items:center;gap:8px;color:#555;font-size:14px}
-#tumorPlaceholderIcon{font-size:48px}
-#tumorPreviewImg{width:100%;height:100%;object-fit:cover}
-
-#tumorVideo{width:100%;height:100%;object-fit:cover;background:#000}
+#tumorCapture{
+  padding:0;
+  overflow:hidden;
+  background:#000;
+  flex-direction:column;
+}
+#tumorViewfinder{
+  position:relative;
+  flex:1;
+  width:100%;
+  min-height:0;
+  overflow:hidden;
+  background:#000;
+}
+#tumorVideo,#tumorPreviewImg{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  background:#000;
+}
 #tumorCanvas{display:none}
-#tumorCaptureBtn,#tumorRetakeBtn,#tumorUploadBtn{width:100%;max-width:420px;padding:14px;border-radius:13px;font-size:16px;font-weight:500;cursor:pointer;border:none}
-#tumorCaptureBtn{background:#34c759;color:#000}
-#tumorRetakeBtn{background:#1c1c1e;color:#aaa;border:1px solid #333;margin-top:8px}
-#tumorUploadBtn{background:#0a84ff;color:#fff;margin-top:8px}
+#tumorPlaceholder{
+  position:absolute;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  color:#aaa;
+  font-size:14px;
+  background:#000;
+}
+#tumorPlaceholderIcon{font-size:48px}
+
+/* 摘出面と同じ横長ガイド。割面は余白を使わず、この枠内をそのまま保存する */
+#tumorGuide{
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-52%);
+  width:86%;
+  aspect-ratio:1.35;
+  border-radius:10px;
+  border:2.5px solid #0a84ff;
+  pointer-events:none;
+  z-index:3;
+}
+#tumorCrossH,#tumorCrossV{
+  position:absolute;
+  background:rgba(255,255,255,0.18);
+  pointer-events:none;
+  z-index:3;
+}
+#tumorCrossH{
+  width:40px;height:1px;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+}
+#tumorCrossV{
+  width:1px;height:40px;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+}
+#tumorTitleBadge{
+  position:absolute;
+  top:max(env(safe-area-inset-top),12px);
+  right:12px;
+  z-index:12;
+  padding:7px 11px;
+  border-radius:999px;
+  background:rgba(0,0,0,0.62);
+  color:#5ac8fa;
+  border:1px solid rgba(90,200,250,0.35);
+  font-size:13px;
+  font-weight:700;
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+}
+#tumorHint{
+  position:absolute;
+  left:16px;
+  right:16px;
+  bottom:108px;
+  z-index:5;
+  text-align:center;
+  font-size:13px;
+  color:rgba(255,255,255,0.85);
+  text-shadow:0 1px 3px rgba(0,0,0,0.8);
+}
+#tumorCaptureBtn{
+  position:absolute;
+  bottom:24px;
+  left:50%;
+  transform:translateX(-50%);
+  width:70px;
+  height:70px;
+  border-radius:50%;
+  background:rgba(255,255,255,0.95);
+  border:4px solid rgba(255,255,255,0.3);
+  cursor:pointer;
+  z-index:6;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0;
+}
+#tumorCaptureBtn::after{
+  content:"";
+  width:54px;
+  height:54px;
+  border-radius:50%;
+  background:#fff;
+}
+#tumorCaptureBtn:active{
+  transform:translateX(-50%) scale(0.9);
+}
+#tumorCaptureBtn:disabled{
+  opacity:0.35;
+  pointer-events:none;
+}
+#tumorReviewActions{
+  position:absolute;
+  left:16px;
+  right:16px;
+  bottom:calc(env(safe-area-inset-bottom) + 20px);
+  z-index:8;
+  display:none;
+  gap:10px;
+}
+#tumorRetakeBtn,#tumorUploadBtn{
+  flex:1;
+  min-height:52px;
+  padding:14px 12px;
+  border-radius:13px;
+  font-size:15px;
+  font-weight:600;
+  cursor:pointer;
+}
+#tumorRetakeBtn{
+  background:rgba(28,28,30,0.92);
+  color:#fff;
+  border:1px solid #555;
+}
+#tumorUploadBtn{
+  background:#0a84ff;
+  color:#fff;
+  border:none;
+}
+#tumorFileInput{display:none}
 /* ===== 割面結果画面 ===== */
 #tumorScore{overflow-y:auto;-webkit-overflow-scrolling:touch}
 #tumorScoreWait{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;min-height:60dvh}
@@ -442,39 +578,43 @@ button{font-family:inherit}
 
 <!-- ========== 割面撮影画面 ========== -->
 <div id="tumorCapture">
-  <button class="back-btn" onclick="backFromTumorCamera()">← 戻る</button>
-  <h2>割面撮影</h2>
-  <p class="sub">切除した断面を正面から撮影してください</p>
+  <div id="tumorViewfinder">
+    <button class="camera-back-btn" onclick="backFromTumorCamera()">← 戻る</button>
+    <div id="tumorTitleBadge">割面撮影</div>
 
-  <div id="tumorPreview">
     <video id="tumorVideo" autoplay playsinline muted style="display:none"></video>
+    <img id="tumorPreviewImg" alt="割面プレビュー" style="display:none">
+
     <div id="tumorPlaceholder">
       <div id="tumorPlaceholderIcon">📷</div>
       <div>カメラを起動しています...</div>
     </div>
-    <img id="tumorPreviewImg" alt="割面プレビュー" style="display:none">
-    <canvas id="tumorCanvas"></canvas>
 
-    <!-- getUserMediaが使えない端末向けのフォールバック -->
+    <div id="tumorGuide">
+      <div class="co tl"></div><div class="co tr"></div>
+      <div class="co bl"></div><div class="co br"></div>
+    </div>
+    <div id="tumorCrossH"></div>
+    <div id="tumorCrossV"></div>
+
+    <div id="tumorHint">割面を枠いっぱいに合わせてください</div>
+
+    <button id="tumorCaptureBtn" onclick="captureTumorPhoto()" aria-label="撮影"></button>
+
+    <div id="tumorReviewActions">
+      <button id="tumorRetakeBtn" onclick="restartTumorCamera()">撮り直す</button>
+      <button id="tumorUploadBtn" onclick="uploadTumor()">この画像を送信</button>
+    </div>
+
+    <canvas id="tumorCanvas"></canvas>
     <input
       type="file"
       id="tumorFileInput"
       accept="image/*"
       capture="environment"
-      style="display:none"
       onchange="onTumorPhoto(event)"
     >
   </div>
-
-  <button id="tumorCaptureBtn" onclick="captureTumorPhoto()">
-    撮影する
-  </button>
-  <button id="tumorRetakeBtn" style="display:none" onclick="restartTumorCamera()">
-    撮り直す
-  </button>
-  <button id="tumorUploadBtn" style="display:none" onclick="uploadTumor()">
-    この画像を送信する
-  </button>
 </div>
 
 <!-- ========== 割面採点待ち・結果画面 ========== -->
@@ -555,6 +695,7 @@ button{font-family:inherit}
 let SUPA_URL = "", SUPA_KEY = "", BUCKET = "scans";
 let subjectId = "", videoStream = null, loopId = null;
 let tumorStream = null, tumorPhotoBlob = null, tumorPhotoUrl = "";
+let preferredCameraDeviceId = "";
 let stableCount = 0, shotNumber = 0;
 const STABLE_NEED = 18; // 約3.6秒（200ms × 18）
 
@@ -704,6 +845,29 @@ function stopStream(stream) {
   stream.getTracks().forEach(track => track.stop());
 }
 
+function getUnifiedCameraConstraints() {
+  const video = {
+    width: { ideal: 1920 },
+    height: { ideal: 1080 }
+  };
+
+  // 一度選ばれた背面カメラを両方の撮影で再利用し、
+  // 広角・標準レンズが画面ごとに変わるのを防ぐ。
+  if (preferredCameraDeviceId) {
+    video.deviceId = { exact: preferredCameraDeviceId };
+  } else {
+    video.facingMode = { ideal: "environment" };
+  }
+
+  return { video, audio: false };
+}
+
+function rememberCameraDevice(stream) {
+  const track = stream?.getVideoTracks?.()[0];
+  const deviceId = track?.getSettings?.().deviceId;
+  if (deviceId) preferredCameraDeviceId = deviceId;
+}
+
 function stopOrganCamera() {
   if (loopId) {
     clearInterval(loopId);
@@ -770,14 +934,10 @@ async function startCamera() {
   stopTumorCamera();
 
   try {
-    videoStream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: "environment",
-        width:  { ideal: 1920 },
-        height: { ideal: 1080 }
-      },
-      audio: false
-    });
+    videoStream = await navigator.mediaDevices.getUserMedia(
+      getUnifiedCameraConstraints()
+    );
+    rememberCameraDevice(videoStream);
     const video = document.getElementById("video");
     video.srcObject = videoStream;
     await video.play();
@@ -1347,18 +1507,30 @@ function resetTumorCaptureUI() {
   clearTumorPhoto();
 
   const video = document.getElementById("tumorVideo");
+  const previewImg = document.getElementById("tumorPreviewImg");
   const placeholder = document.getElementById("tumorPlaceholder");
   const captureBtn = document.getElementById("tumorCaptureBtn");
-  const retakeBtn = document.getElementById("tumorRetakeBtn");
-  const uploadBtn = document.getElementById("tumorUploadBtn");
+  const reviewActions = document.getElementById("tumorReviewActions");
+  const guide = document.getElementById("tumorGuide");
+  const crossH = document.getElementById("tumorCrossH");
+  const crossV = document.getElementById("tumorCrossV");
+  const hint = document.getElementById("tumorHint");
 
   video.style.display = "none";
+  previewImg.style.display = "none";
   placeholder.style.display = "flex";
   placeholder.lastElementChild.textContent = "カメラを起動しています...";
-  captureBtn.style.display = "block";
+
+  captureBtn.style.display = "flex";
+  captureBtn.onclick = captureTumorPhoto;
   captureBtn.disabled = true;
-  retakeBtn.style.display = "none";
-  uploadBtn.style.display = "none";
+  reviewActions.style.display = "none";
+
+  guide.style.display = "block";
+  crossH.style.display = "block";
+  crossV.style.display = "block";
+  hint.style.display = "block";
+  hint.textContent = "割面を枠いっぱいに合わせてください";
 }
 
 async function startTumor() {
@@ -1376,14 +1548,10 @@ async function startTumor() {
       throw new Error("getUserMedia is not supported");
     }
 
-    tumorStream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: { ideal: "environment" },
-        width: { ideal: 1920 },
-        height: { ideal: 1080 }
-      },
-      audio: false
-    });
+    tumorStream = await navigator.mediaDevices.getUserMedia(
+      getUnifiedCameraConstraints()
+    );
+    rememberCameraDevice(tumorStream);
 
     video.srcObject = tumorStream;
     await video.play();
@@ -1396,7 +1564,7 @@ async function startTumor() {
 
     placeholder.style.display = "flex";
     placeholder.lastElementChild.textContent =
-      "端末のカメラ画面を開きます";
+      "撮影ボタンを押すと端末のカメラが開きます";
     captureBtn.disabled = false;
     captureBtn.onclick = openTumorFileCamera;
   }
@@ -1404,6 +1572,29 @@ async function startTumor() {
 
 function openTumorFileCamera() {
   document.getElementById("tumorFileInput").click();
+}
+
+function getTumorCropRect(videoW, videoH) {
+  // 摘出面と同じガイド幅・縦横比を使用する。
+  // 割面では周辺余白を評価に使わないため、マージンは付けない。
+  const isPortrait = videoH > videoW;
+  const frameW = isPortrait ? videoW : videoH;
+  const frameH = isPortrait ? videoH : videoW;
+
+  const boxW = frameW * 0.86;
+  const boxH = boxW / 1.35;
+  const cx = frameW / 2;
+  const cy = frameH * 0.48;
+
+  const x = Math.max(0, Math.round(cx - boxW / 2));
+  const y = Math.max(0, Math.round(cy - boxH / 2));
+  const w = Math.min(frameW - x, Math.round(boxW));
+  const h = Math.min(frameH - y, Math.round(boxH));
+
+  if (isPortrait) {
+    return { x, y, w, h };
+  }
+  return { x: y, y: x, w: h, h: w };
 }
 
 async function captureTumorPhoto() {
@@ -1416,11 +1607,24 @@ async function captureTumorPhoto() {
   }
 
   const canvas = document.getElementById("tumorCanvas");
-  const width = video.videoWidth || 1280;
-  const height = video.videoHeight || 960;
-  canvas.width = width;
-  canvas.height = height;
-  canvas.getContext("2d").drawImage(video, 0, 0, width, height);
+  const fullWidth = video.videoWidth || 1280;
+  const fullHeight = video.videoHeight || 960;
+
+  const fullCanvas = document.createElement("canvas");
+  fullCanvas.width = fullWidth;
+  fullCanvas.height = fullHeight;
+  fullCanvas.getContext("2d").drawImage(
+    video, 0, 0, fullWidth, fullHeight
+  );
+
+  const crop = getTumorCropRect(fullWidth, fullHeight);
+  canvas.width = crop.w;
+  canvas.height = crop.h;
+  canvas.getContext("2d").drawImage(
+    fullCanvas,
+    crop.x, crop.y, crop.w, crop.h,
+    0, 0, crop.w, crop.h
+  );
 
   const blob = await new Promise(resolve =>
     canvas.toBlob(resolve, "image/jpeg", 0.92)
@@ -1433,9 +1637,8 @@ async function captureTumorPhoto() {
   setTumorPreview(blob);
 }
 
-function onTumorPhoto(event) {
+async function onTumorPhoto(event) {
   const file = event.target.files?.[0];
-  // 同じ画像を再選択できるよう、inputの値はすぐにリセットする。
   event.target.value = "";
   if (!file) return;
 
@@ -1444,7 +1647,28 @@ function onTumorPhoto(event) {
     return;
   }
 
-  setTumorPreview(file);
+  try {
+    const bitmap = await createImageBitmap(file);
+    const crop = getTumorCropRect(bitmap.width, bitmap.height);
+    const canvas = document.getElementById("tumorCanvas");
+    canvas.width = crop.w;
+    canvas.height = crop.h;
+    canvas.getContext("2d").drawImage(
+      bitmap,
+      crop.x, crop.y, crop.w, crop.h,
+      0, 0, crop.w, crop.h
+    );
+    bitmap.close();
+
+    const blob = await new Promise(resolve =>
+      canvas.toBlob(resolve, "image/jpeg", 0.92)
+    );
+    if (!blob) throw new Error("画像変換に失敗しました");
+    setTumorPreview(blob);
+  } catch (e) {
+    console.warn("中央クロップに失敗したため元画像を使用します:", e);
+    setTumorPreview(file);
+  }
 }
 
 function setTumorPreview(blob) {
@@ -1458,8 +1682,11 @@ function setTumorPreview(blob) {
   const placeholder = document.getElementById("tumorPlaceholder");
   const previewImg = document.getElementById("tumorPreviewImg");
   const captureBtn = document.getElementById("tumorCaptureBtn");
-  const retakeBtn = document.getElementById("tumorRetakeBtn");
-  const uploadBtn = document.getElementById("tumorUploadBtn");
+  const reviewActions = document.getElementById("tumorReviewActions");
+  const guide = document.getElementById("tumorGuide");
+  const crossH = document.getElementById("tumorCrossH");
+  const crossV = document.getElementById("tumorCrossV");
+  const hint = document.getElementById("tumorHint");
 
   video.style.display = "none";
   placeholder.style.display = "none";
@@ -1467,10 +1694,14 @@ function setTumorPreview(blob) {
   previewImg.style.display = "block";
 
   captureBtn.style.display = "none";
-  captureBtn.onclick = captureTumorPhoto;
-  captureBtn.disabled = false;
-  retakeBtn.style.display = "block";
-  uploadBtn.style.display = "block";
+  reviewActions.style.display = "flex";
+
+  // 保存画像はすでにガイド枠で切り出されているため、
+  // 確認画面では枠や十字線を重ねない。
+  guide.style.display = "none";
+  crossH.style.display = "none";
+  crossV.style.display = "none";
+  hint.style.display = "none";
 }
 
 async function restartTumorCamera() {
