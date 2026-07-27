@@ -197,6 +197,25 @@ button{font-family:inherit}
 #admin>button{width:100%;min-height:52px;padding:15px;border-radius:13px;background:#1c1c1e;color:#fff;font-size:16px;font-weight:500;border:1px solid #333;cursor:pointer;display:block}
 #admin>button.secondary{background:transparent;border-color:#444;color:#aaa}
 #admin>button:active{opacity:0.7}
+
+/* ===== 割面撮影画面 ===== */
+#tumorBtn{width:100%;max-width:340px;padding:14px;border-radius:13px;background:#1c1c1e;border:1px solid #444;color:#aaa;font-size:15px;cursor:pointer;margin-top:0}
+#tumorCapture{align-items:center}
+#tumorCapture h2{font-size:20px;font-weight:600}
+#tumorPreview{width:100%;max-width:420px;aspect-ratio:4/3;background:#1c1c1e;border:2px dashed #333;border-radius:14px;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;margin:0.5rem 0}
+#tumorPreview:active{opacity:0.8}
+#tumorPlaceholder{display:flex;flex-direction:column;align-items:center;gap:8px;color:#555;font-size:14px}
+#tumorPlaceholderIcon{font-size:48px}
+#tumorPreviewImg{width:100%;height:100%;object-fit:cover}
+#tumorCaptureBtn,#tumorRetakeBtn,#tumorUploadBtn{width:100%;max-width:420px;padding:14px;border-radius:13px;font-size:16px;font-weight:500;cursor:pointer;border:none}
+#tumorCaptureBtn{background:#34c759;color:#000}
+#tumorRetakeBtn{background:#1c1c1e;color:#aaa;border:1px solid #333;margin-top:8px}
+#tumorUploadBtn{background:#0a84ff;color:#fff;margin-top:8px}
+/* ===== 割面結果画面 ===== */
+#tumorScore{overflow-y:auto;-webkit-overflow-scrolling:touch}
+#tumorScoreWait{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;min-height:60dvh}
+#tumorScoreBody{display:flex;flex-direction:column;gap:0.75rem}
+#tumorScoreBody h2{font-size:18px;font-weight:600}
 #adminLink{text-align:center;font-size:13px;color:#666;text-decoration:underline;cursor:pointer;padding:8px}
 
 /* 管理者モード 詳細パネル（スコア画面と同じレイアウト） */
@@ -253,6 +272,7 @@ button{font-family:inherit}
 
   <div id="connStatus" class="ng">未接続</div>
   <button id="startBtn" onclick="start()" disabled>カメラを起動</button>
+  <button id="tumorBtn" onclick="startTumor()">割面を撮影する</button>
   <div id="adminLink" onclick="openAdmin()">採点結果の一覧を見る（管理者）</div>
 </div>
 
@@ -359,6 +379,66 @@ button{font-family:inherit}
       採点結果を取得できませんでした。<br><br>
       PC側で <b>auto_evaluate.py</b> が動いているか確認してください。<br>
       （画像のアップロード自体は成功しています）
+    </div>
+    <div class="btn-row">
+      <button onclick="retake()">次の被験者へ</button>
+      <button class="ghost" onclick="show('setup')">ホームに戻る</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ========== 割面撮影画面 ========== -->
+<div id="tumorCapture">
+  <button class="back-btn" onclick="show('setup')">← 戻る</button>
+  <h2>割面撮影</h2>
+  <p class="sub">切除した断面を正面から撮影してください</p>
+
+  <div id="tumorPreview">
+    <div id="tumorPlaceholder">
+      <div id="tumorPlaceholderIcon">📷</div>
+      <div>タップして撮影</div>
+    </div>
+    <img id="tumorPreviewImg" style="display:none">
+    <input type="file" id="tumorFileInput" accept="image/*" capture="environment" style="display:none" onchange="onTumorPhoto(event)">
+  </div>
+
+  <button id="tumorCaptureBtn" onclick="document.getElementById('tumorFileInput').click()">
+    撮影する
+  </button>
+  <button id="tumorRetakeBtn" style="display:none" onclick="document.getElementById('tumorFileInput').click()">
+    撮り直す
+  </button>
+  <button id="tumorUploadBtn" style="display:none" onclick="uploadTumor()">
+    この画像で採点する
+  </button>
+</div>
+
+<!-- ========== 割面採点待ち・結果画面 ========== -->
+<div id="tumorScore">
+  <div id="tumorScoreWait">
+    <div class="spinner"></div>
+    <div style="font-size:15px">割面を採点中...</div>
+    <p class="sub" id="tumorWaitNote">PCで解析しています</p>
+  </div>
+
+  <div id="tumorScoreBody" style="display:none">
+    <h2>割面採点結果</h2>
+    <div id="tumorVizWrap" style="display:none">
+      <div style="font-size:12px;color:#888;margin-bottom:6px">割面解析（青=理想線 / 黄=腫瘍）</div>
+      <img id="tumorVizImg" alt="割面解析" style="width:100%;border-radius:12px">
+    </div>
+    <div id="tumorAxisList"></div>
+    <div class="btn-row">
+      <button onclick="retake()">次の被験者へ</button>
+      <button class="ghost" onclick="show('setup')">ホームに戻る</button>
+    </div>
+  </div>
+
+  <div id="tumorScoreFail" style="display:none">
+    <div class="err-box">
+      割面の採点結果を取得できませんでした。<br><br>
+      PC側で <b>auto_evaluate.py</b> が動いているか確認してください。
     </div>
     <div class="btn-row">
       <button onclick="retake()">次の被験者へ</button>
@@ -944,7 +1024,8 @@ function incrementSubjectId() {
 // ============================================================
 function show(id) {
   ["setup", "scanner", "uploading", "result",
-   "timeInput", "score", "admin"].forEach(s => {
+   "timeInput", "score", "admin",
+   "tumorCapture", "tumorScore"].forEach(s => {
     const el = document.getElementById(s);
     if (el) el.style.display = "none";
   });
