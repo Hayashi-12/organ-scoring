@@ -1772,7 +1772,7 @@ async function uploadTumor() {
   }
 
   const recordKey = captureSessionKey;
-  const filename = `${recordKey}_cutface.jpg`;
+  const filename = `${recordKey}_tumor.jpg`;
 
   try {
     const response = await fetch(
@@ -1973,7 +1973,7 @@ function showCutfaceImage(imgEl, wrapEl, recordKey) {
   if (!imgEl || !recordKey) return;
 
   const privateUrl =
-    `${SUPA_URL}/storage/v1/object/${BUCKET}/results/${recordKey}_cutface.png?t=${Date.now()}`;
+    `${SUPA_URL}/storage/v1/object/${BUCKET}/results/${recordKey}_tumor.png?t=${Date.now()}`;
   imgEl.src = privateUrl;
 
   imgEl.onload = () => {
@@ -1981,7 +1981,7 @@ function showCutfaceImage(imgEl, wrapEl, recordKey) {
   };
   imgEl.onerror = () => {
     const publicUrl =
-      `${SUPA_URL}/storage/v1/object/public/${BUCKET}/results/${recordKey}_cutface.png?t=${Date.now()}`;
+      `${SUPA_URL}/storage/v1/object/public/${BUCKET}/results/${recordKey}_tumor.png?t=${Date.now()}`;
     imgEl.onerror = () => {
       if (wrapEl) wrapEl.style.display = "none";
     };
