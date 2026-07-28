@@ -468,6 +468,10 @@ button{font-family:inherit}
 <div id="shootSelect">
   <button class="back-btn" onclick="show('timeInput')">← 戻る</button>
   <h2>撮影する画像を選んでください</h2>
+  <p style="font-size:13px;color:#888;text-align:center;line-height:1.6">
+    摘出面と割面を1枚ずつ撮影します。<br>
+    撮影する順番はどちらからでも構いません。
+  </p>
 
   <button id="shootOrganBtn" onclick="doStartCamera()">
     <div class="shoot-icon">🔬</div>
@@ -512,7 +516,7 @@ button{font-family:inherit}
 
 <!-- ========== 割面撮影への案内 ========== -->
 <div id="cutfacePrompt">
-  <div class="step-badge">摘出面の送信完了・撮影 1/2</div>
+  <div class="step-badge">摘出面の送信完了</div>
   <h2>次に割面を撮影します</h2>
   <p>
     切除片を割り、断面をカメラへ正対させてください。<br>
@@ -744,6 +748,8 @@ let subjectId = "", videoStream = null, loopId = null;
 let tumorStream = null, tumorPhotoBlob = null, tumorPhotoUrl = "";
 let preferredCameraDeviceId = "";
 let captureSessionKey = "";
+let organUploaded = false;
+let tumorUploaded = false;
 let stableCount = 0, shotNumber = 0;
 const STABLE_NEED = 18; // 約3.6秒（200ms × 18）
 
@@ -951,13 +957,15 @@ function clearTumorPhoto() {
 function backFromOrganCamera() {
   stopOrganCamera();
   stableCount = 0;
-  show("timeInput");
+  updateShootSelectUI();
+  show("shootSelect");
 }
 
 function backFromTumorCamera() {
   stopTumorCamera();
   clearTumorPhoto();
-  show("cutfacePrompt");
+  updateShootSelectUI();
+  show("shootSelect");
 }
 
 // ============================================================
@@ -972,6 +980,8 @@ function start() {
   // 前回の入力をリセット
   tMin = 5; tSec = 0; isTimedOut = false; elapsedSec = null;
   captureSessionKey = "";
+  organUploaded = false;
+  tumorUploaded = false;
   setSkill("novice");   // 熟練度は毎回 novice から選び直す
   show("timeInput");
   // 画面表示後にドラムを構築（scrollTop は表示後でないと効かない）
@@ -1320,8 +1330,8 @@ async function capture() {
       }
     );
 
-    // 摘出面だけでは採点を開始せず、同じrecord_keyで割面を撮影する。
-    show("cutfacePrompt");
+    organUploaded = true;
+    finishCaptureIfReady();
 
   } catch(e) {
     show("result");
@@ -1374,6 +1384,8 @@ function retake() {
   stopTumorCamera();
   clearTumorPhoto();
   captureSessionKey = "";
+  organUploaded = false;
+  tumorUploaded = false;
   show("setup");
   document.getElementById("subjectBadge").textContent = subjectId;
   checkConnection();
@@ -1540,9 +1552,46 @@ function confirmTime(timedOut) {
     isTimedOut = true;
     elapsedSec = null;
   }
-  // 同じ被験者について、摘出面→割面の順に2枚撮影する。
+  // 同じrecord_keyで2枚を管理し、撮影順は選択画面で決める。
   captureSessionKey = createCaptureSessionKey();
-  startCamera();
+  organUploaded = false;
+  tumorUploaded = false;
+  updateShootSelectUI();
+  show("shootSelect");
+}
+
+function updateShootSelectUI() {
+  const organBtn = document.getElementById("shootOrganBtn");
+  const tumorBtn = document.getElementById("shootTumorBtn");
+
+  if (organBtn) {
+    organBtn.style.opacity = organUploaded ? "0.55" : "1";
+    organBtn.querySelector(".shoot-label").textContent =
+      organUploaded ? "摘出面：撮影済み" : "摘出面を撮影";
+    organBtn.querySelector(".shoot-sub").textContent =
+      organUploaded ? "再撮影する場合はタップ" : "切除した臓器の表面";
+  }
+
+  if (tumorBtn) {
+    tumorBtn.style.opacity = tumorUploaded ? "0.55" : "1";
+    tumorBtn.querySelector(".shoot-label").textContent =
+      tumorUploaded ? "割面：撮影済み" : "割面を撮影";
+    tumorBtn.querySelector(".shoot-sub").textContent =
+      tumorUploaded ? "再撮影する場合はタップ" : "切断した断面";
+  }
+}
+
+function finishCaptureIfReady() {
+  if (!organUploaded || !tumorUploaded) {
+    updateShootSelectUI();
+    show("shootSelect");
+    return;
+  }
+
+  const recordKey = captureSessionKey;
+  shotNumber++;
+  incrementSubjectId();
+  startPolling(recordKey);
 }
 
 function doStartCamera() { startCamera(); }  // 摘出面
@@ -1766,7 +1815,7 @@ async function uploadTumor() {
   show("uploading");
 
   if (!captureSessionKey) {
-    alert("撮影セッションが見つかりません。摘出面から撮り直してください。");
+    alert("撮影セッションが見つかりません。時間入力からやり直してください。");
     show("timeInput");
     return;
   }
@@ -1795,11 +1844,8 @@ async function uploadTumor() {
     }
 
     clearTumorPhoto();
-    shotNumber++;
-
-    // 2枚が揃ったので統合採点を開始する。
-    incrementSubjectId();
-    startPolling(recordKey);
+    tumorUploaded = true;
+    finishCaptureIfReady();
   } catch (e) {
     show("result");
     document.getElementById("resultTitle").textContent = "エラー";
