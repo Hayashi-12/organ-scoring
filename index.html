@@ -210,6 +210,10 @@ button{font-family:inherit}
 .shoot-icon{font-size:40px}
 .shoot-label{font-size:18px;font-weight:600}
 .shoot-sub{font-size:13px;color:#888}
+.shoot-status{font-size:12px;margin-top:4px;font-weight:600}
+.shoot-status.done{color:#34c759}
+.shoot-thumb{width:100%;max-width:380px;border-radius:12px;margin-top:-6px;opacity:0.85}
+#shootHint{font-size:13px;color:#888;text-align:center;margin-top:-6px}
 #tumorBtn{width:100%;max-width:340px;padding:14px;border-radius:13px;background:#1c1c1e;border:1px solid #444;color:#aaa;font-size:15px;cursor:pointer;margin-top:0}
 #tumorCapture{align-items:center}
 #tumorCapture h2{font-size:20px;font-weight:600}
@@ -291,18 +295,23 @@ button{font-family:inherit}
 <div id="shootSelect">
   <button class="back-btn" onclick="show('timeInput')">← 戻る</button>
   <h2>撮影する画像を選んでください</h2>
+  <p class="sub" id="shootHint">両方を撮影すると採点結果が表示されます</p>
 
   <button id="shootOrganBtn" onclick="doStartCamera()">
     <div class="shoot-icon">🔬</div>
     <div class="shoot-label">摘出面を撮影</div>
     <div class="shoot-sub">切除した臓器の表面</div>
+    <div class="shoot-status" id="organStatus"></div>
   </button>
+  <img id="organThumb" class="shoot-thumb" style="display:none">
 
   <button id="shootTumorBtn" onclick="doStartTumor()">
     <div class="shoot-icon">✂️</div>
     <div class="shoot-label">割面を撮影</div>
     <div class="shoot-sub">切断した断面</div>
+    <div class="shoot-status" id="tumorStatus"></div>
   </button>
+  <img id="tumorThumb" class="shoot-thumb" style="display:none">
 </div>
 <!-- ========== スキャナー ========== -->
 <div id="scanner">
@@ -1021,15 +1030,26 @@ async function capture() {
       }
     );
 
-    // 成功 → 採点結果の到着を待つ（ポーリング）
+    // 成功 → 摘出面はここでは採点結果を待たない。
+    // 割面も撮り終えてから、まとめて6軸の結果を表示する。
     shotNumber++;
 
-    // 被験者IDを自動インクリメント（S001 → S002）
-    incrementSubjectId();
+    // 割面採点後にこのキーで結果を取りに行くので保存しておく
+    organRecordKey = recordKey;
 
-    // PC側が採点を終えて results/<recordKey>.json を置くのを待ち、
-    // 届いたらこの端末（iPhone）に点数を表示する。
-    startPolling(recordKey);
+    // 撮影した画像をサムネイル表示して、撮影種別選択に戻る
+    const thumb = document.getElementById("organThumb");
+    if (thumb) {
+      thumb.src = URL.createObjectURL(blob);
+      thumb.style.display = "block";
+    }
+    const st = document.getElementById("organStatus");
+    if (st) {
+      st.textContent = "✓ 撮影済み（タップで撮り直し）";
+      st.className = "shoot-status done";
+    }
+    updateShootHint();
+    show("shootSelect");
 
   } catch(e) {
     show("result");
@@ -1074,9 +1094,26 @@ function retake() {
   saveSettings();
   stableCount = 0;
   stopPolling();
+  resetShootState();
   show("setup");
   document.getElementById("subjectBadge").textContent = subjectId;
   checkConnection();
+}
+
+function resetShootState() {
+  // 次の被験者に移るとき、摘出面／割面の撮影状態をクリアする
+  organRecordKey = null;
+  tumorRecordKey = null;
+  tumorBlob = null;
+  ["organThumb", "tumorThumb"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.style.display = "none"; el.removeAttribute("src"); }
+  });
+  ["organStatus", "tumorStatus"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = ""; el.className = "shoot-status"; }
+  });
+  updateShootHint();
 }
 
 // ============================================================
@@ -1270,6 +1307,16 @@ function startPolling(recordKey) {
 
     const score = await fetchScore(recordKey);
     if (score) {
+      // 割面も撮影済みなら、6軸に統合された結果が来るまで待つ。
+      // PC側は 摘出面採点 → 割面採点 → 統合 の順に処理するため、
+      // 先に4軸の結果が置かれることがある。
+      const needCutFace = !!tumorRecordKey;
+      if (needCutFace && !score.cut_face_enabled && pollCount < POLL_MAX) {
+        note.textContent =
+          `割面の採点を待っています（${pollCount * 3}秒経過）`;
+        pollTimer = setTimeout(tick, POLL_INTERVAL_MS);
+        return;
+      }
       stopPolling();
       renderScore(score, recordKey);
       return;
@@ -1690,6 +1737,120 @@ async function openDetail(r) {
 
 function closeDetail() {
   document.getElementById("adminDetail").style.display = "none";
+}
+
+
+// ============================================================
+//  割面撮影フロー
+// ============================================================
+let tumorBlob = null;
+let tumorRecordKey = null;
+// 摘出面のレコードキー。割面を撮り終えたあと、このキーで
+// 6軸に統合された採点結果を取りに行く。
+let organRecordKey = null;
+
+function updateShootHint() {
+  const hint = document.getElementById("shootHint");
+  if (!hint) return;
+  if (organRecordKey && tumorRecordKey) {
+    hint.textContent = "両方撮影しました。採点結果を待っています…";
+  } else if (organRecordKey) {
+    hint.textContent = "次に割面を撮影すると採点結果が表示されます";
+  } else if (tumorRecordKey) {
+    hint.textContent = "次に摘出面を撮影すると採点結果が表示されます";
+  } else {
+    hint.textContent = "両方を撮影すると採点結果が表示されます";
+  }
+}
+
+function startTumor() {
+  tumorBlob = null;
+  document.getElementById("tumorPreviewImg").style.display = "none";
+  document.getElementById("tumorPlaceholder").style.display = "flex";
+  document.getElementById("tumorCaptureBtn").style.display = "block";
+  document.getElementById("tumorRetakeBtn").style.display = "none";
+  document.getElementById("tumorUploadBtn").style.display = "none";
+  show("tumorCapture");
+}
+
+function onTumorPhoto(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  tumorBlob = file;
+  const url = URL.createObjectURL(file);
+  const img = document.getElementById("tumorPreviewImg");
+  img.src = url;
+  img.style.display = "block";
+  document.getElementById("tumorPlaceholder").style.display = "none";
+  document.getElementById("tumorCaptureBtn").style.display = "none";
+  document.getElementById("tumorRetakeBtn").style.display = "block";
+  document.getElementById("tumorUploadBtn").style.display = "block";
+}
+
+async function uploadTumor() {
+  if (!tumorBlob) return;
+  if (!SUPA_URL || !SUPA_KEY) {
+    alert("Supabaseの接続情報を設定してください");
+    show("setup");
+    return;
+  }
+
+  show("uploading");
+
+  // ファイル名末尾を _tumor にすることで、PC側が割面と判別する
+  const now = new Date();
+  const ts = now.getFullYear().toString()
+    + String(now.getMonth()+1).padStart(2,"0")
+    + String(now.getDate()).padStart(2,"0")
+    + "_" + String(now.getHours()).padStart(2,"0")
+    + String(now.getMinutes()).padStart(2,"0")
+    + String(now.getSeconds()).padStart(2,"0");
+  const timeTag = isTimedOut ? "tTO" : `t${elapsedSec}`;
+  const limitSec = getLimitSec();
+  const limitTag = (limitSec === null) ? "Lno" : `L${limitSec}`;
+  tumorRecordKey =
+    `${subjectId}_${selectedSide}_${selectedSkill}_${ts}_${timeTag}_${limitTag}_tumor`;
+  const filename = `${tumorRecordKey}.jpg`;
+
+  try {
+    const res = await fetch(
+      `${SUPA_URL}/storage/v1/object/${BUCKET}/${filename}`,
+      {
+        method: "POST",
+        headers: {
+          "apikey": SUPA_KEY,
+          "Authorization": `Bearer ${SUPA_KEY}`,
+          "Content-Type": "image/jpeg",
+          "x-upsert": "true",
+        },
+        body: tumorBlob,
+      }
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  } catch(e) {
+    show("result");
+    document.getElementById("resultTitle").textContent = "エラー";
+    document.getElementById("resultContent").innerHTML =
+      `<div class="err-box">割面のアップロードに失敗しました。<br><br>${e.message}</div>`;
+    return;
+  }
+
+  // サムネイル表示
+  const thumb = document.getElementById("tumorThumb");
+  thumb.src = URL.createObjectURL(tumorBlob);
+  thumb.style.display = "block";
+  const st = document.getElementById("tumorStatus");
+  st.textContent = "✓ 撮影済み（タップで撮り直し）";
+  st.className = "shoot-status done";
+  updateShootHint();
+
+  // 摘出面も撮影済みなら、6軸の採点結果を取りに行く。
+  // まだなら撮影種別選択に戻って、摘出面の撮影を促す。
+  if (organRecordKey) {
+    startPolling(organRecordKey);
+  } else {
+    show("shootSelect");
+  }
 }
 
 // ============================================================
