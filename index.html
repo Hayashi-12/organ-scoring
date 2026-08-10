@@ -214,6 +214,8 @@ button{font-family:inherit}
 .shoot-status.done{color:#34c759}
 .shoot-thumb{width:100%;max-width:380px;border-radius:12px;margin-top:-6px;opacity:0.85}
 #shootHint{font-size:13px;color:#888;text-align:center;margin-top:-6px}
+#gradeBtn{width:100%;max-width:380px;padding:16px;border-radius:14px;background:#0a84ff;color:#fff;border:none;font-size:17px;font-weight:600;cursor:pointer;margin-top:6px}
+#gradeBtn:active{opacity:0.7}
 #tumorBtn{width:100%;max-width:340px;padding:14px;border-radius:13px;background:#1c1c1e;border:1px solid #444;color:#aaa;font-size:15px;cursor:pointer;margin-top:0}
 #tumorCapture{align-items:center}
 #tumorCapture h2{font-size:20px;font-weight:600}
@@ -312,6 +314,10 @@ button{font-family:inherit}
     <div class="shoot-status" id="tumorStatus"></div>
   </button>
   <img id="tumorThumb" class="shoot-thumb" style="display:none">
+
+  <button id="gradeBtn" style="display:none" onclick="startGrading()">
+    採点する
+  </button>
 </div>
 <!-- ========== スキャナー ========== -->
 <div id="scanner">
@@ -1602,8 +1608,27 @@ function renderAdmin() {
   if (adminTab === "rank") {
     rows.sort((a, b) => (b.total_score ?? 0) - (a.total_score ?? 0));
   } else {
-    // 採点順（record_key に日時が入っているので昇順で採点した順になる）
-    rows.sort((a, b) => (a.record_key || "").localeCompare(b.record_key || ""));
+    // 採点順（新しいものが上）
+    // record_key は "S001_left_novice_20260811_012411_..." の形式で
+    // 被験者IDが先頭にあるため、文字列比較では日時順にならない。
+    // recorded_at（採点日時）で並べ替える。無い場合は
+    // record_key から日時部分（8桁_6桁）を抜き出して使う。
+    const timeOf = (r) => {
+      if (r.recorded_at) {
+        const t = Date.parse(r.recorded_at.replace(" ", "T"));
+        if (!isNaN(t)) return t;
+      }
+      const m = (r.record_key || "").match(/(\d{8})_(\d{6})/);
+      if (m) {
+        const d = m[1], s = m[2];
+        return Date.parse(
+          `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}T` +
+          `${s.slice(0,2)}:${s.slice(2,4)}:${s.slice(4,6)}`
+        ) || 0;
+      }
+      return 0;
+    };
+    rows.sort((a, b) => timeOf(b) - timeOf(a));   // 新しい順
   }
 
   list.innerHTML = "";
@@ -1751,16 +1776,31 @@ let organRecordKey = null;
 
 function updateShootHint() {
   const hint = document.getElementById("shootHint");
-  if (!hint) return;
-  if (organRecordKey && tumorRecordKey) {
-    hint.textContent = "両方撮影しました。採点結果を待っています…";
-  } else if (organRecordKey) {
-    hint.textContent = "次に割面を撮影すると採点結果が表示されます";
-  } else if (tumorRecordKey) {
-    hint.textContent = "次に摘出面を撮影すると採点結果が表示されます";
-  } else {
-    hint.textContent = "両方を撮影すると採点結果が表示されます";
+  const btn  = document.getElementById("gradeBtn");
+  const both = !!(organRecordKey && tumorRecordKey);
+  if (hint) {
+    if (both) {
+      hint.textContent = "両方撮影しました。採点できます。";
+    } else if (organRecordKey) {
+      hint.textContent = "次に割面を撮影してください";
+    } else if (tumorRecordKey) {
+      hint.textContent = "次に摘出面を撮影してください";
+    } else {
+      hint.textContent = "摘出面と割面の両方を撮影してください";
+    }
   }
+  // 両方そろったときだけ「採点する」ボタンを出す
+  if (btn) btn.style.display = both ? "block" : "none";
+}
+
+function startGrading() {
+  // 両方の画像がアップロード済みなので、PC側の採点完了を待つ。
+  // 摘出面のキーで結果を取りに行く（割面スコアはPC側で統合される）。
+  if (!organRecordKey) {
+    alert("先に摘出面を撮影してください");
+    return;
+  }
+  startPolling(organRecordKey);
 }
 
 function startTumor() {
@@ -1844,13 +1884,9 @@ async function uploadTumor() {
   st.className = "shoot-status done";
   updateShootHint();
 
-  // 摘出面も撮影済みなら、6軸の採点結果を取りに行く。
-  // まだなら撮影種別選択に戻って、摘出面の撮影を促す。
-  if (organRecordKey) {
-    startPolling(organRecordKey);
-  } else {
-    show("shootSelect");
-  }
+  // 割面もプレビューを見せるため、いったん撮影選択画面に戻る。
+  // 採点は「採点する」ボタンを押したタイミングで開始する。
+  show("shootSelect");
 }
 
 // ============================================================
