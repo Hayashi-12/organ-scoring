@@ -1529,27 +1529,12 @@ async function capture() {
   // クロップ画像をJPEGに変換
   const blob = await new Promise(r => cropCanvas.toBlob(r, "image/jpeg", 0.92));
 
-  // ファイル名: S001_20260615_143022.jpg
-  const now = new Date();
-  const ts = now.getFullYear().toString() +
-    String(now.getMonth()+1).padStart(2,"0") +
-    String(now.getDate()).padStart(2,"0") + "_" +
-    String(now.getHours()).padStart(2,"0") +
-    String(now.getMinutes()).padStart(2,"0") +
-    String(now.getSeconds()).padStart(2,"0");
-  // 所要時間をファイル名に埋め込む。
-  //   _t285 → 285秒で完了 /  _tTO → 時間切れ
-  // PC側(auto_evaluate.py)はこれを読んで時間スコアを計算する。
-  // 時間だけを別送すると画像と対応づける手間が増えるので、
-  // ファイル名に載せてしまうのが確実。
-  const timeTag = isTimedOut ? "tTO" : `t${elapsedSec}`;
-  // 制限時間タグ: L420=制限7分, Lno=制限なし
-  const limitSec = getLimitSec();
-  const limitTag = (limitSec === null) ? "Lno" : `L${limitSec}`;
-  // ファイル名に 側・熟練度・時間・制限時間 を埋め込む。PC側がこれを読んでCSVに記録する。
-  //   例: S001_left_novice_20260714_143022_t285_L420.jpg
-  const recordKey = `${subjectId}_${selectedSide}_${selectedSkill}_${ts}_${timeTag}_${limitTag}`;
-  const filename = `${recordKey}.jpg`;
+  // 摘出面と割面は同じrecord_keyを共有し、末尾だけで種類を区別する。
+  if (!captureSessionKey) {
+    captureSessionKey = createCaptureSessionKey();
+  }
+  const recordKey = captureSessionKey;
+  const filename = `${recordKey}_organ.jpg`;
 
   try {
     // ── 画像をSupabase Storageにアップロード ──
@@ -1676,6 +1661,7 @@ function resetShootState() {
   // 次の被験者に移るとき、摘出面／割面の撮影状態をクリアする
   organRecordKey = null;
   tumorRecordKey = null;
+  captureSessionKey = "";
   tumorBlob = null;
   ["organThumb", "tumorThumb"].forEach(id => {
     const el = document.getElementById(id);
@@ -1835,6 +1821,23 @@ function onTimeChange() {
   if (toBtn) toBtn.style.display = (limitSec === null) ? "none" : "block";
 }
 
+function createCaptureSessionKey() {
+  const now = new Date();
+  const timestamp =
+    now.getFullYear().toString() +
+    String(now.getMonth() + 1).padStart(2, "0") +
+    String(now.getDate()).padStart(2, "0") + "_" +
+    String(now.getHours()).padStart(2, "0") +
+    String(now.getMinutes()).padStart(2, "0") +
+    String(now.getSeconds()).padStart(2, "0");
+
+  const timeTag = isTimedOut ? "tTO" : `t${elapsedSec}`;
+  const limitSec = getLimitSec();
+  const limitTag = limitSec === null ? "Lno" : `L${limitSec}`;
+
+  return `${subjectId}_${selectedSide}_${selectedSkill}_${timestamp}_${timeTag}_${limitTag}`;
+}
+
 function confirmTime(timedOut) {
   isTimedOut = timedOut;
   elapsedSec = timedOut ? null : (tMin * 60 + tSec);
@@ -1849,6 +1852,12 @@ function confirmTime(timedOut) {
     isTimedOut = true;
     elapsedSec = null;
   }
+  // この被験者の摘出面・割面で共通のrecord_keyを1つだけ作る。
+  captureSessionKey = createCaptureSessionKey();
+  organRecordKey = null;
+  tumorRecordKey = null;
+  updateShootHint();
+
   // 時間確定後、摘出面か割面かを選んでもらう
   show("shootSelect");
 }
@@ -2438,6 +2447,8 @@ function closeDetail() {
 // ============================================================
 let tumorBlob = null;
 let tumorRecordKey = null;
+// 摘出面と割面で必ず同じrecord_keyを共有する。
+let captureSessionKey = "";
 // 摘出面のレコードキー。割面を撮り終えたあと、このキーで
 // 6軸に統合された採点結果を取りに行く。
 let organRecordKey = null;
@@ -2498,20 +2509,13 @@ async function uploadTumor() {
 
   show("uploading");
 
-  // ファイル名末尾を _tumor にすることで、PC側が割面と判別する
-  const now = new Date();
-  const ts = now.getFullYear().toString()
-    + String(now.getMonth()+1).padStart(2,"0")
-    + String(now.getDate()).padStart(2,"0")
-    + "_" + String(now.getHours()).padStart(2,"0")
-    + String(now.getMinutes()).padStart(2,"0")
-    + String(now.getSeconds()).padStart(2,"0");
-  const timeTag = isTimedOut ? "tTO" : `t${elapsedSec}`;
-  const limitSec = getLimitSec();
-  const limitTag = (limitSec === null) ? "Lno" : `L${limitSec}`;
-  tumorRecordKey =
-    `${subjectId}_${selectedSide}_${selectedSkill}_${ts}_${timeTag}_${limitTag}_tumor`;
-  const filename = `${tumorRecordKey}.jpg`;
+  // PC側は同一record_keyの _organ / _cutface を1組として解析する。
+  if (!captureSessionKey) {
+    captureSessionKey = createCaptureSessionKey();
+  }
+  const recordKey = captureSessionKey;
+  tumorRecordKey = recordKey;
+  const filename = `${recordKey}_cutface.jpg`;
 
   try {
     const res = await fetch(
