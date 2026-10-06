@@ -437,11 +437,11 @@ button{font-family:inherit}
 
   <div class="field">
     <label>Supabase URL</label>
-    <input id="inUrl" type="url" placeholder="https://xxxxx.supabase.co" autocomplete="off">
+    <input id="inUrl" type="url" placeholder="https://xxxxx.supabase.co" value="https://vuxwmyudoymqcyplyjkl.supabase.co/" autocomplete="off">
   </div>
   <div class="field">
     <label>Publishable Key</label>
-    <input id="inKey" type="text" placeholder="sb_publishable_..." autocomplete="off">
+    <input id="inKey" type="text" placeholder="sb_publishable_..." value="sb_publishable_vreFxwLz67v5Qp4TvJycAA_J3FtjYzf" autocomplete="off">
   </div>
   <div class="field">
     <label>被験者ID</label>
@@ -739,7 +739,7 @@ button{font-family:inherit}
 // ============================================================
 //  グローバル変数
 // ============================================================
-let SUPA_URL = "", SUPA_KEY = "", BUCKET = "scans";
+let SUPA_URL = "https://vuxwmyudoymqcyplyjkl.supabase.co", SUPA_KEY = "sb_publishable_vreFxwLz67v5Qp4TvJycAA_J3FtjYzf", BUCKET = "scans";
 let subjectId = "", videoStream = null, loopId = null;
 let tumorStream = null, tumorPhotoBlob = null, tumorPhotoUrl = "";
 let preferredCameraDeviceId = "";
@@ -758,7 +758,7 @@ const GUARD = {
   // ── サイズ（赤いガイド枠に対する臓器外接矩形の大きさ）──
   // 面積率ではなく、画面上の赤枠にどれだけ沿っているかで判定する。
   // 70%未満なら近づける、108%を超えたら離す。
-  GUIDE_FILL_MIN: 0.50,
+  GUIDE_FILL_MIN: 0.70,
   GUIDE_FILL_MAX: 1.08,
   ORGAN_RATIO_NONE: 0.03,   // これ未満は「臓器が見えない」
 
