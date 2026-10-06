@@ -1558,6 +1558,7 @@ async function capture() {
     }
 
     // ── メタ情報もJSON保存 ──
+    const now = new Date();
     const meta = {
       subject_id: subjectId,
       timestamp: now.toISOString(),
