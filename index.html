@@ -10,7 +10,7 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:-apple-system,sans-serif;background:#0a0a0a;color:#fff}
 /* 全画面共通: fixed で body の overflow に依存しない */
-#setup,#scanner,#uploading,#timeInput,#score,#admin,#adminDetail,#result,#tumorCapture,#tumorScore,#shootSelect,#cutfacePrompt{display:none;position:fixed;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;flex-direction:column;align-items:stretch;padding:1.2rem;padding-top:max(env(safe-area-inset-top),1.2rem);padding-bottom:calc(env(safe-area-inset-bottom)+1.5rem);gap:0.75rem}
+#setup,#scanner,#uploading,#timeInput,#score,#admin,#adminDetail,#result,#shootSelect{display:none;position:fixed;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;flex-direction:column;align-items:stretch;padding:1.2rem;padding-top:max(env(safe-area-inset-top),1.2rem);padding-bottom:calc(env(safe-area-inset-bottom)+1.5rem);gap:0.75rem}
 button{font-family:inherit}
 
 /* ===== セットアップ画面 ===== */
@@ -94,26 +94,6 @@ button{font-family:inherit}
 #captureBtn.off{background:rgba(80,80,80,0.6);border-color:rgba(80,80,80,0.3);pointer-events:none}
 #captureInner{width:54px;height:54px;border-radius:50%;background:#fff;transition:background 0.2s}
 #captureBtn.off #captureInner{background:#444}
-
-/* カメラ起動後も表示する戻るボタン */
-.camera-back-btn{
-  position:absolute;
-  top:max(env(safe-area-inset-top),12px);
-  left:12px;
-  z-index:12;
-  min-width:78px;
-  padding:9px 13px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,0.25);
-  background:rgba(0,0,0,0.62);
-  color:#fff;
-  font-size:14px;
-  font-weight:600;
-  cursor:pointer;
-  backdrop-filter:blur(8px);
-  -webkit-backdrop-filter:blur(8px);
-}
-.camera-back-btn:active{opacity:0.65}
 
 /* ===== アップロード画面 ===== */
 #uploading{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:20;flex-direction:column;align-items:center;justify-content:center;gap:1rem}
@@ -230,180 +210,14 @@ button{font-family:inherit}
 .shoot-icon{font-size:40px}
 .shoot-label{font-size:18px;font-weight:600}
 .shoot-sub{font-size:13px;color:#888}
+.shoot-status{font-size:12px;margin-top:4px;font-weight:600}
+.shoot-status.done{color:#34c759}
+.shoot-thumb{width:100%;max-width:380px;border-radius:12px;margin-top:-6px;opacity:0.85}
+#shootHint{font-size:13px;color:#888;text-align:center;margin-top:-6px}
+#gradeBtn{width:100%;max-width:380px;padding:16px;border-radius:14px;background:#0a84ff;color:#fff;border:none;font-size:17px;font-weight:600;cursor:pointer;margin-top:6px}
+#gradeBtn:active{opacity:0.7}
 #tumorBtn{width:100%;max-width:340px;padding:14px;border-radius:13px;background:#1c1c1e;border:1px solid #444;color:#aaa;font-size:15px;cursor:pointer;margin-top:0}
-#tumorCapture{
-  padding:0;
-  overflow:hidden;
-  background:#000;
-  flex-direction:column;
-}
-#tumorViewfinder{
-  position:relative;
-  flex:1;
-  width:100%;
-  min-height:0;
-  overflow:hidden;
-  background:#000;
-}
-#tumorVideo,#tumorPreviewImg{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  background:#000;
-}
-#tumorCanvas{display:none}
-#tumorPlaceholder{
-  position:absolute;
-  inset:0;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:10px;
-  color:#aaa;
-  font-size:14px;
-  background:#000;
-}
-#tumorPlaceholderIcon{font-size:48px}
-
-/* 摘出面と同じ横長ガイド。割面は余白を使わず、この枠内をそのまま保存する */
-#tumorGuide{
-  position:absolute;
-  top:58%;
-  left:50%;
-  transform:translate(-50%,-50%);
-  width:88%;
-  aspect-ratio:2/1;
-  border-radius:10px;
-  border:2.5px solid #0a84ff;
-  pointer-events:none;
-  z-index:3;
-}
-#tumorIdealArc{
-  position:absolute;
-  left:3%;
-  right:3%;
-  bottom:5%;
-  height:90%;
-  border:2px dashed rgba(90,200,250,0.75);
-  border-bottom:none;
-  border-radius:50% 50% 0 0 / 100% 100% 0 0;
-}
-#tumorBaseLine{
-  position:absolute;
-  left:3%;
-  right:3%;
-  bottom:5%;
-  height:2px;
-  background:rgba(255,214,10,0.9);
-}
-#tumorCrossH,#tumorCrossV{
-  position:absolute;
-  background:rgba(255,255,255,0.18);
-  pointer-events:none;
-  z-index:3;
-}
-#tumorCrossH{
-  width:40px;height:1px;top:50%;left:50%;
-  transform:translate(-50%,-50%);
-}
-#tumorCrossV{
-  width:1px;height:40px;top:50%;left:50%;
-  transform:translate(-50%,-50%);
-}
-#tumorTitleBadge{
-  position:absolute;
-  top:max(env(safe-area-inset-top),12px);
-  right:12px;
-  z-index:12;
-  padding:7px 11px;
-  border-radius:999px;
-  background:rgba(0,0,0,0.62);
-  color:#5ac8fa;
-  border:1px solid rgba(90,200,250,0.35);
-  font-size:13px;
-  font-weight:700;
-  backdrop-filter:blur(8px);
-  -webkit-backdrop-filter:blur(8px);
-}
-#tumorHint{
-  position:absolute;
-  left:16px;
-  right:16px;
-  bottom:108px;
-  z-index:5;
-  text-align:center;
-  font-size:13px;
-  color:rgba(255,255,255,0.85);
-  text-shadow:0 1px 3px rgba(0,0,0,0.8);
-}
-#tumorCaptureBtn{
-  position:absolute;
-  bottom:24px;
-  left:50%;
-  transform:translateX(-50%);
-  width:70px;
-  height:70px;
-  border-radius:50%;
-  background:rgba(255,255,255,0.95);
-  border:4px solid rgba(255,255,255,0.3);
-  cursor:pointer;
-  z-index:6;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:0;
-}
-#tumorCaptureBtn::after{
-  content:"";
-  width:54px;
-  height:54px;
-  border-radius:50%;
-  background:#fff;
-}
-#tumorCaptureBtn:active{
-  transform:translateX(-50%) scale(0.9);
-}
-#tumorCaptureBtn:disabled{
-  opacity:0.35;
-  pointer-events:none;
-}
-#tumorReviewActions{
-  position:absolute;
-  left:16px;
-  right:16px;
-  bottom:calc(env(safe-area-inset-bottom) + 20px);
-  z-index:8;
-  display:none;
-  gap:10px;
-}
-#tumorRetakeBtn,#tumorUploadBtn{
-  flex:1;
-  min-height:52px;
-  padding:14px 12px;
-  border-radius:13px;
-  font-size:15px;
-  font-weight:600;
-  cursor:pointer;
-}
-#tumorRetakeBtn{
-  background:rgba(28,28,30,0.92);
-  color:#fff;
-  border:1px solid #555;
-}
-#tumorUploadBtn{
-  background:#0a84ff;
-  color:#fff;
-  border:none;
-}
-#tumorFileInput{display:none}
 /* ===== 割面結果画面 ===== */
-#tumorScore{overflow-y:auto;-webkit-overflow-scrolling:touch}
-#tumorScoreWait{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;min-height:60dvh}
-#tumorScoreBody{display:flex;flex-direction:column;gap:0.75rem}
-#tumorScoreBody h2{font-size:18px;font-weight:600}
 #adminLink{text-align:center;font-size:13px;color:#666;text-decoration:underline;cursor:pointer;padding:8px}
 
 /* 管理者モード 詳細パネル（スコア画面と同じレイアウト） */
@@ -423,16 +237,564 @@ button{font-family:inherit}
 #adminDetail .close-btn{display:block;width:100%;padding:14px;border-radius:13px;background:#1c1c1e;border:1px solid #333;color:#fff;font-size:15px;cursor:pointer;text-align:center;margin-top:4px}
 #detailRadar{width:100%;border-radius:12px;background:#fff}
 #detailAxes{display:flex;flex-direction:column;gap:8px}
+
+/* ===== 採点結果画面 v2: 上部圧縮 + 焦げ度合いアコーディオン ===== */
+#score{
+  padding:0.8rem;
+  padding-top:max(env(safe-area-inset-top),0.8rem);
+  padding-bottom:calc(env(safe-area-inset-bottom) + 1rem);
+}
+#scoreBody{
+  width:100%;
+  max-width:760px;
+  margin:0 auto;
+  gap:10px;
+}
+#scoreSummary{
+  display:grid;
+  grid-template-columns:minmax(0,0.92fr) minmax(160px,1.08fr);
+  align-items:center;
+  gap:8px;
+  padding:4px 2px 2px;
+}
+#scoreSummaryLeft{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:7px;
+}
+#scoreSummaryRight{
+  min-width:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+#gradeBadge{
+  font-size:13px;
+  padding:5px 13px;
+}
+#totalScore{
+  font-size:42px;
+  line-height:0.95;
+  letter-spacing:-1px;
+}
+#totalScore .max{
+  font-size:18px;
+}
+#scoreCap{
+  font-size:10px;
+  line-height:1.35;
+  margin-top:-1px;
+}
+#radarImg{
+  width:100%;
+  max-width:270px;
+  aspect-ratio:1/1;
+  object-fit:contain;
+  border-radius:0;
+  background:transparent;
+  display:block;
+}
+#axisList{ display:block; }
+.axis-panel{
+  background:#1c1c1e;
+  border:1px solid #2c2c2e;
+  border-radius:12px;
+  overflow:hidden;
+}
+.axis-compact{
+  padding:9px 11px;
+  border-bottom:1px solid #2c2c2e;
+}
+.axis-compact:last-child{ border-bottom:none; }
+.axis-compact.na{ opacity:0.45; }
+.axis-main-row{
+  display:grid;
+  grid-template-columns:82px minmax(0,1fr) 64px 18px;
+  gap:8px;
+  align-items:center;
+  min-height:22px;
+}
+.axis-main-row:not(.accordion-trigger){
+  grid-template-columns:82px minmax(0,1fr) 64px;
+}
+.axis-compact-name{
+  font-size:13px;
+  font-weight:600;
+  white-space:nowrap;
+}
+.axis-compact-pts{
+  font-size:12px;
+  color:#999;
+  text-align:right;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+.axis-mini-track{
+  height:6px;
+  background:#303034;
+  border-radius:99px;
+  overflow:hidden;
+}
+.axis-mini-fill{
+  height:100%;
+  background:#34c759;
+  border-radius:99px;
+}
+.axis-mini-fill.low{ background:#ff9f0a; }
+.axis-mini-fill.bad{ background:#ff453a; }
+.axis-chevron{
+  width:18px;
+  height:18px;
+  color:#aaa;
+  font-size:16px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:transform .18s ease;
+}
+.axis-compact.open .axis-chevron{ transform:rotate(180deg); }
+.accordion-trigger{
+  cursor:pointer;
+  -webkit-user-select:none;
+  user-select:none;
+}
+.severity-accordion{
+  display:none;
+  padding:10px 0 2px 90px;
+}
+.axis-compact.open .severity-accordion{ display:block; }
+.severity-accordion-inner{
+  background:#151517;
+  border:1px solid #29292d;
+  border-radius:10px;
+  padding:10px 11px;
+}
+.severity-accordion-title{
+  font-size:11px;
+  color:#888;
+  margin-bottom:8px;
+}
+.sev-bars{ margin-top:0; gap:7px; }
+.sev-row{ gap:7px; }
+.sev-label{ min-width:26px; font-size:11px; }
+.sev-track{ height:5px; }
+.sev-pct{ font-size:11px; min-width:30px; }
+
+.result-image-card{
+  background:#1c1c1e;
+  border:1px solid #2c2c2e;
+  border-radius:12px;
+  padding:9px;
+}
+.result-image-title{
+  font-size:13px;
+  font-weight:600;
+  margin-bottom:2px;
+}
+.result-image-note{
+  font-size:10px;
+  line-height:1.4;
+  color:#777;
+  margin-bottom:7px;
+}
+.result-image-card img{
+  width:100%;
+  display:block;
+  border-radius:9px;
+}
+#score{
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+}
+@media (max-width:420px){
+  #scoreSummary{
+    grid-template-columns:minmax(0,0.9fr) minmax(150px,1.1fr);
+  }
+  #totalScore{ font-size:38px; }
+  #radarImg{ max-width:220px; }
+  .axis-main-row{
+    grid-template-columns:74px minmax(0,1fr) 58px 16px;
+    gap:6px;
+  }
+  .axis-main-row:not(.accordion-trigger){
+    grid-template-columns:74px minmax(0,1fr) 58px;
+  }
+  .axis-compact-name{font-size:12px}
+  .axis-compact-pts{font-size:11px}
+  .severity-accordion{padding-left:80px}
+}
+
+
+/* ============================================================
+   FINAL RESULT SCREEN
+   - top summary compressed
+   - only 焦げ度合 is accordion
+   - detailed result cards below
+   ============================================================ */
+#score{
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  padding:10px 12px;
+  padding-top:max(env(safe-area-inset-top),10px);
+  padding-bottom:calc(env(safe-area-inset-bottom) + 18px);
+}
+#scoreBody{
+  width:100%;
+  max-width:760px;
+  margin:0 auto;
+  gap:10px;
+}
+#scoreSummary{
+  display:grid;
+  grid-template-columns:minmax(0,.9fr) minmax(160px,1.1fr);
+  align-items:center;
+  gap:8px;
+  min-height:190px;
+}
+#scoreSummaryLeft{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:7px;
+  min-width:0;
+}
+#scoreSummaryRight{
+  min-width:0;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+#gradeBadge{
+  font-size:13px;
+  padding:5px 13px;
+}
+#totalScore{
+  font-size:43px;
+  letter-spacing:-1px;
+  line-height:.98;
+}
+#totalScore .max{font-size:18px}
+#scoreCap{
+  font-size:10px;
+  line-height:1.35;
+}
+#radarImg{
+  width:100%;
+  max-width:270px;
+  aspect-ratio:1/1;
+  object-fit:contain;
+  border-radius:0;
+  background:transparent;
+}
+
+/* one compact panel */
+#axisList{display:block}
+.axis-panel{
+  overflow:hidden;
+  border-radius:12px;
+  border:1px solid #2c2c2e;
+  background:#1c1c1e;
+}
+.axis-compact{
+  padding:9px 11px;
+  border-bottom:1px solid #2c2c2e;
+}
+.axis-compact:last-child{border-bottom:none}
+.axis-compact.na{opacity:.45}
+.axis-main-row{
+  display:grid;
+  grid-template-columns:82px minmax(0,1fr) 64px;
+  gap:8px;
+  align-items:center;
+  min-height:23px;
+}
+.axis-main-row.accordion-trigger{
+  grid-template-columns:82px minmax(0,1fr) 64px 18px;
+}
+.axis-compact-name{
+  font-size:13px;
+  font-weight:600;
+  white-space:nowrap;
+}
+.axis-compact-pts{
+  font-size:12px;
+  color:#aaa;
+  text-align:right;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+.axis-mini-track{
+  height:6px;
+  background:#303034;
+  border-radius:999px;
+  overflow:hidden;
+}
+.axis-mini-fill{
+  height:100%;
+  background:#34c759;
+  border-radius:999px;
+}
+.axis-mini-fill.low{background:#ff9f0a}
+.axis-mini-fill.bad{background:#ff453a}
+
+/* only burn row expands */
+.accordion-trigger{
+  cursor:pointer;
+  -webkit-user-select:none;
+  user-select:none;
+}
+.axis-chevron{
+  font-size:16px;
+  line-height:1;
+  color:#bbb;
+  transition:transform .18s ease;
+  text-align:center;
+}
+.axis-compact.open .axis-chevron{transform:rotate(180deg)}
+.severity-accordion{
+  display:none;
+  padding:10px 0 2px 90px;
+}
+.axis-compact.open .severity-accordion{display:block}
+.severity-accordion-inner{
+  background:#141518;
+  border:1px solid #2a2d33;
+  border-radius:10px;
+  padding:10px 11px;
+}
+.severity-accordion-title{
+  font-size:11px;
+  color:#9a9ca0;
+  margin-bottom:8px;
+}
+.sev-bars{
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  margin:0;
+}
+.sev-row{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.sev-label{
+  min-width:28px;
+  font-size:11px;
+  color:#aaa;
+}
+.sev-track{
+  flex:1;
+  height:5px;
+  background:#2f3238;
+  border-radius:999px;
+  overflow:hidden;
+}
+.sev-fill{height:100%;border-radius:999px}
+.sev-fill.bad{background:#ff453a}
+.sev-fill.low{background:#ffd60a}
+.sev-fill.good{background:#34c759}
+.sev-pct{
+  min-width:34px;
+  text-align:right;
+  font-size:11px;
+  color:#aaa;
+}
+
+/* detailed results */
+#detailResults{
+  margin-top:6px;
+  padding-top:10px;
+  border-top:1px solid #22252a;
+}
+#detailResults h2{
+  font-size:19px;
+  font-weight:700;
+  margin:0 0 10px;
+}
+.detail-two-col{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.analysis-card{
+  background:#1c1c1e;
+  border:1px solid #2c2c2e;
+  border-radius:12px;
+  padding:9px;
+  min-width:0;
+}
+.analysis-title{
+  font-size:12px;
+  font-weight:650;
+  margin-bottom:7px;
+  color:#f2f2f4;
+}
+.analysis-img{
+  display:block;
+  width:100%;
+  border-radius:9px;
+  background:#0d0d0f;
+}
+.organ-analysis-img{
+  aspect-ratio:1.32/1;
+  object-fit:contain; /* do not crop the burn contour / labels */
+}
+.analysis-feedback{
+  margin-top:8px;
+  background:#141518;
+  border-radius:8px;
+  padding:8px 9px;
+  font-size:11px;
+  line-height:1.55;
+  color:#e3e3e5;
+}
+.severity-legend-inline{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  align-items:center;
+  margin-top:7px;
+  font-size:10px;
+  color:#aaa;
+}
+.severity-legend-inline span{
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+.legend-dot{
+  width:9px;
+  height:9px;
+  display:inline-block;
+  border-radius:50%;
+}
+.legend-dot.severe{background:#ff453a}
+.legend-dot.moderate{background:#ffd60a}
+.legend-dot.mild{background:#34c759}
+
+/* cut-face: display only image portion (old PNG includes a text panel below) */
+.cutface-card{
+  margin-top:10px;
+}
+.cutface-layout{
+  display:grid;
+  grid-template-columns:minmax(0,1.65fr) minmax(150px,.8fr);
+  gap:12px;
+  align-items:start;
+}
+.cutface-img-window{
+  width:100%;
+  aspect-ratio:1.95/1;
+  overflow:hidden;
+  border-radius:9px;
+  background:#0d0d0f;
+}
+.cutface-img{
+  display:block;
+  width:100%;
+  height:auto;
+  transform:none;
+}
+.cutface-stats{
+  font-size:11px;
+  line-height:1.55;
+  color:#eee;
+}
+.cutface-stat-row{
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  border-bottom:1px solid #292b30;
+  padding:4px 0;
+}
+.cutface-stat-row:last-of-type{border-bottom:none}
+.cutface-stat-label{color:#aaa}
+.cutface-legend{
+  margin-top:9px;
+  color:#aaa;
+  line-height:1.55;
+}
+.cutface-advice{
+  margin-top:9px;
+  padding-top:8px;
+  border-top:1px solid #292b30;
+  color:#eee;
+}
+
+/* bottom actions */
+.result-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:10px;
+}
+.result-actions button{
+  min-height:54px;
+  border-radius:999px;
+  font-size:15px;
+  font-weight:650;
+}
+.result-actions .next-btn{
+  background:#0c9d43;
+  border:2px solid #34c759;
+  color:#fff;
+}
+.result-actions .next-btn span{
+  font-size:24px;
+  vertical-align:-1px;
+  margin-left:10px;
+}
+.result-actions .home-btn{
+  background:#25282d;
+  border:1px solid #545861;
+  color:#fff;
+}
+
+@media (max-width:430px){
+  #score{padding-left:9px;padding-right:9px}
+  #scoreSummary{
+    grid-template-columns:minmax(0,.88fr) minmax(145px,1.12fr);
+    min-height:160px;
+  }
+  #totalScore{font-size:38px}
+  #radarImg{max-width:220px}
+  .axis-main-row{
+    grid-template-columns:72px minmax(0,1fr) 56px;
+    gap:6px;
+  }
+  .axis-main-row.accordion-trigger{
+    grid-template-columns:72px minmax(0,1fr) 56px 16px;
+  }
+  .axis-compact-name{font-size:12px}
+  .axis-compact-pts{font-size:11px}
+  .severity-accordion{padding-left:78px}
+  .detail-two-col{gap:7px}
+  .analysis-card{padding:7px}
+  .analysis-title{font-size:11px}
+  .analysis-feedback{font-size:10px;padding:7px}
+  .cutface-layout{
+    grid-template-columns:minmax(0,1.55fr) minmax(122px,.75fr);
+    gap:8px;
+  }
+  .cutface-stats{font-size:10px}
+}
+
 </style>
 </head>
 <body>
+<!-- 割面撮影用の隠しinput。どの画面からでも呼べるよう body 直下に置く -->
+<input type="file" id="tumorFileInput" accept="image/*" capture="environment"
+       style="display:none" onchange="onTumorPhoto(event)">
 
 <!-- ========== セットアップ ========== -->
 <div id="setup">
   <h1>撮影ガイド</h1>
   <p class="desc">
-    摘出面と割面を順番に撮影すると、<br>
-    6軸・100点満点で自動評価します。
+    模擬臓器をガイド枠に合わせて撮影すると、<br>
+    自動的にPCに転送されます。
   </p>
 
   <div class="field">
@@ -459,7 +821,7 @@ button{font-family:inherit}
   </div>
 
   <div id="connStatus" class="ng">未接続</div>
-  <button id="startBtn" onclick="start()" disabled>2枚の撮影を開始</button>
+  <button id="startBtn" onclick="start()" disabled>カメラを起動</button>
   <div id="adminLink" onclick="openAdmin()">採点結果の一覧を見る（管理者）</div>
 </div>
 
@@ -468,23 +830,31 @@ button{font-family:inherit}
 <div id="shootSelect">
   <button class="back-btn" onclick="show('timeInput')">← 戻る</button>
   <h2>撮影する画像を選んでください</h2>
+  <p class="sub" id="shootHint">両方を撮影すると採点結果が表示されます</p>
 
   <button id="shootOrganBtn" onclick="doStartCamera()">
     <div class="shoot-icon">🔬</div>
     <div class="shoot-label">摘出面を撮影</div>
     <div class="shoot-sub">切除した臓器の表面</div>
+    <div class="shoot-status" id="organStatus"></div>
   </button>
+  <img id="organThumb" class="shoot-thumb" style="display:none">
 
   <button id="shootTumorBtn" onclick="doStartTumor()">
     <div class="shoot-icon">✂️</div>
     <div class="shoot-label">割面を撮影</div>
     <div class="shoot-sub">切断した断面</div>
+    <div class="shoot-status" id="tumorStatus"></div>
+  </button>
+  <img id="tumorThumb" class="shoot-thumb" style="display:none">
+
+  <button id="gradeBtn" style="display:none" onclick="startGrading()">
+    採点する
   </button>
 </div>
 <!-- ========== スキャナー ========== -->
 <div id="scanner">
   <div id="viewfinder">
-    <button class="camera-back-btn" onclick="backFromOrganCamera()">← 戻る</button>
     <video id="video" autoplay playsinline muted></video>
     <canvas id="canvas"></canvas>
 
@@ -507,19 +877,6 @@ button{font-family:inherit}
       <div id="captureInner"></div>
     </button>
   </div>
-</div>
-
-
-<!-- ========== 割面撮影への案内 ========== -->
-<div id="cutfacePrompt">
-  <div class="step-badge">摘出面の送信完了・撮影 1/2</div>
-  <h2>次に割面を撮影します</h2>
-  <p>
-    切除片を割り、断面をカメラへ正対させてください。<br>
-    割面の左右端を基準線に合わせ、余白を入れず撮影します。
-  </p>
-  <button id="cutfaceNextBtn" onclick="startTumor()">割面撮影へ進む</button>
-  <button id="organAgainBtn" onclick="startCamera()">摘出面を撮り直す</button>
 </div>
 
 <!-- ========== アップロード中 ========== -->
@@ -579,24 +936,55 @@ button{font-family:inherit}
   </div>
 
   <div id="scoreBody" style="display:none">
-    <div id="scoreTop"><div id="gradeBadge">—</div><div id="totalScore">0<span class="max">/100</span></div></div>
-    <div id="scoreCap"></div>
-    <img id="radarImg" alt="レーダーチャート">
+    <div id="scoreSummary">
+      <div id="scoreSummaryLeft">
+        <div id="gradeBadge">—</div>
+        <div id="totalScore">0<span class="max">/100</span></div>
+        <div id="scoreCap"></div>
+      </div>
+      <div id="scoreSummaryRight">
+        <img id="radarImg" alt="レーダーチャート">
+      </div>
+    </div>
+
     <div id="axisList"></div>
 
-    <div id="cutfaceVizWrap" style="display:none">
-      <div style="font-size:12px;color:#888;margin-bottom:6px">
-        割面解析（緑=実輪郭 / 青=理想半円 / 黄=基準線）
+    <section id="detailResults">
+      <h2>詳細結果</h2>
+
+      <div class="detail-two-col">
+        <div id="marginWrap" class="analysis-card" style="display:none">
+          <div class="analysis-title">切除表面の評価</div>
+          <img id="marginImg" class="analysis-img organ-analysis-img" alt="切除表面の評価">
+          <div id="marginFeedback" class="analysis-feedback"></div>
+        </div>
+
+        <div id="severityWrap" class="analysis-card" style="display:none">
+          <div class="analysis-title">切除表面の焦げ度合評価</div>
+          <img id="severityImg" class="analysis-img organ-analysis-img" alt="焦げ段階">
+          <div class="severity-legend-inline">
+            <span><i class="legend-dot severe"></i>重度</span>
+            <span><i class="legend-dot moderate"></i>中度</span>
+            <span><i class="legend-dot mild"></i>軽度</span>
+          </div>
+          <div id="severityFeedback" class="analysis-feedback"></div>
+        </div>
       </div>
-      <img id="cutfaceVizImg" alt="割面解析" style="width:100%;border-radius:12px">
-    </div>
-    <div id="severityWrap" style="display:none">
-      <div style="font-size:12px;color:#888;margin-bottom:6px">焦げ段階マスク（重度=赤 / 中度=橙 / 軽度=黄）</div>
-      <img id="severityImg" alt="焦げ段階" style="width:100%;border-radius:12px">
-    </div>
-    <div class="btn-row">
-      <button onclick="retake()">次の被験者へ</button>
-      <button class="ghost" onclick="show('setup')">ホームに戻る</button>
+
+      <div id="tumorVizWrapMain" class="analysis-card cutface-card" style="display:none">
+        <div class="analysis-title">腫瘍割面の評価</div>
+        <div class="cutface-layout">
+          <div class="cutface-img-window">
+            <img id="tumorVizImgMain" class="cutface-img" alt="割面解析">
+          </div>
+          <div id="cutfaceStats" class="cutface-stats"></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="btn-row result-actions">
+      <button class="next-btn" onclick="retake()">次の被験者へ <span>›</span></button>
+      <button class="ghost home-btn" onclick="show('setup')">ホームに戻る</button>
     </div>
   </div>
 
@@ -614,81 +1002,7 @@ button{font-family:inherit}
 </div>
 
 
-<!-- ========== 割面撮影画面 ========== -->
-<div id="tumorCapture">
-  <div id="tumorViewfinder">
-    <button class="camera-back-btn" onclick="backFromTumorCamera()">← 戻る</button>
-    <div id="tumorTitleBadge">撮影 2/2・割面</div>
 
-    <video id="tumorVideo" autoplay playsinline muted style="display:none"></video>
-    <img id="tumorPreviewImg" alt="割面プレビュー" style="display:none">
-
-    <div id="tumorPlaceholder">
-      <div id="tumorPlaceholderIcon">📷</div>
-      <div>カメラを起動しています...</div>
-    </div>
-
-    <div id="tumorGuide">
-      <div class="co tl"></div><div class="co tr"></div>
-      <div class="co bl"></div><div class="co br"></div>
-      <div id="tumorIdealArc"></div>
-      <div id="tumorBaseLine"></div>
-    </div>
-    <div id="tumorCrossH"></div>
-    <div id="tumorCrossV"></div>
-
-    <div id="tumorHint">左右端を黄色線の両端に合わせ、断面を正面から撮影</div>
-
-    <button id="tumorCaptureBtn" onclick="captureTumorPhoto()" aria-label="撮影"></button>
-
-    <div id="tumorReviewActions">
-      <button id="tumorRetakeBtn" onclick="restartTumorCamera()">撮り直す</button>
-      <button id="tumorUploadBtn" onclick="uploadTumor()">この画像を送信</button>
-    </div>
-
-    <canvas id="tumorCanvas"></canvas>
-    <input
-      type="file"
-      id="tumorFileInput"
-      accept="image/*"
-      capture="environment"
-      onchange="onTumorPhoto(event)"
-    >
-  </div>
-</div>
-
-<!-- ========== 割面採点待ち・結果画面 ========== -->
-<div id="tumorScore">
-  <div id="tumorScoreWait">
-    <div class="spinner"></div>
-    <div style="font-size:15px">割面を採点中...</div>
-    <p class="sub" id="tumorWaitNote">PCで解析しています</p>
-  </div>
-
-  <div id="tumorScoreBody" style="display:none">
-    <h2>割面採点結果</h2>
-    <div id="tumorVizWrap" style="display:none">
-      <div style="font-size:12px;color:#888;margin-bottom:6px">割面解析（青=理想線 / 黄=腫瘍）</div>
-      <img id="tumorVizImg" alt="割面解析" style="width:100%;border-radius:12px">
-    </div>
-    <div id="tumorAxisList"></div>
-    <div class="btn-row">
-      <button onclick="retake()">次の被験者へ</button>
-      <button class="ghost" onclick="show('setup')">ホームに戻る</button>
-    </div>
-  </div>
-
-  <div id="tumorScoreFail" style="display:none">
-    <div class="err-box">
-      割面の採点結果を取得できませんでした。<br><br>
-      PC側で <b>auto_evaluate.py</b> が動いているか確認してください。
-    </div>
-    <div class="btn-row">
-      <button onclick="retake()">次の被験者へ</button>
-      <button class="ghost" onclick="show('setup')">ホームに戻る</button>
-    </div>
-  </div>
-</div>
 
 <!-- ========== 管理者モード（iPad想定） ========== -->
 <div id="admin">
@@ -713,16 +1027,13 @@ button{font-family:inherit}
   <h3 id="detailTitle">—</h3>
   <img id="detailRadar" alt="レーダー">
   <div id="detailAxes"></div>
-
-  <div id="detailCutfaceWrap" style="display:none">
-    <div style="font-size:12px;color:#888;margin-bottom:6px">
-      割面解析（緑=実輪郭 / 青=理想半円 / 黄=基準線）
-    </div>
-    <img id="detailCutface" alt="割面解析" style="width:100%;border-radius:12px">
-  </div>
   <div id="detailSeverityWrap" style="display:none">
     <div style="font-size:12px;color:#888;margin-bottom:6px">焦げ段階マスク（重度=赤 / 中度=橙 / 軽度=黄）</div>
     <img id="detailSeverity" alt="焦げ段階" style="width:100%;border-radius:12px">
+  </div>
+  <div id="detailTumorVizWrap" style="display:none">
+    <div style="font-size:12px;color:#888;margin:8px 0 6px">割面解析（緑=組織輪郭 / 青=理想円弧 / 水色=腫瘍 / 赤=左右マージン）</div>
+    <img id="detailTumorViz" alt="割面解析" style="width:100%;border-radius:12px">
   </div>
   <button class="close-btn" onclick="closeDetail()">← 一覧に戻る</button>
 </div>
@@ -741,49 +1052,41 @@ button{font-family:inherit}
 // ============================================================
 let SUPA_URL = "https://vuxwmyudoymqcyplyjkl.supabase.co", SUPA_KEY = "sb_publishable_vreFxwLz67v5Qp4TvJycAA_J3FtjYzf", BUCKET = "scans";
 let subjectId = "", videoStream = null, loopId = null;
-let tumorStream = null, tumorPhotoBlob = null, tumorPhotoUrl = "";
-let preferredCameraDeviceId = "";
-let captureSessionKey = "";
 let stableCount = 0, shotNumber = 0;
 const STABLE_NEED = 18; // 約3.6秒（200ms × 18）
 
 // ============================================================
 //  撮影ガード閾値
-//  現在の撮影条件に合わせ、サイズは赤枠基準・背景は青背景で判定する。
+//  sample_images 3枚の実測に基づく。グレーカード導入時は
+//  WHITE_REF_MIN/MAX を校正板の基準値に差し替えるだけでよい。
 //    実測: 臓器の縦横比 1.35（ブレ1.1%）
 //          臓器の画面占有率 24.1% / 32.8% / 26.4%（← 距離のブレ。要厳格化）
-//          背景は現在の青背景を使用
+//          白背景のV値 202 / 225 / 218（← 照明のブレ。要厳格化）
 // ============================================================
 const GUARD = {
   // ── サイズ（赤いガイド枠に対する臓器外接矩形の大きさ）──
-  // 面積率ではなく、画面上の赤枠にどれだけ沿っているかで判定する。
-  // 70%未満なら近づける、108%を超えたら離す。
+  // ユーザー確定値: 0.50
   GUIDE_FILL_MIN: 0.50,
   GUIDE_FILL_MAX: 1.08,
-  ORGAN_RATIO_NONE: 0.03,   // これ未満は「臓器が見えない」
+  ORGAN_RATIO_NONE: 0.03,
 
-  // ── 形（縦横比）: 斜めから撮ると比が崩れるので角度ガードを兼ねる ──
+  // ── 形（縦横比）──
   ASPECT_TARGET: 1.35,
   ASPECT_MIN: 1.05,
   ASPECT_MAX: 1.75,
 
-  // ── 背景 ──
-  // 現在の撮影条件は白背景ではなく青背景。
-  // 画面周辺部のうち一定割合が青ならOKとする。
+  // ── 青背景 ──
   BLUE_BG_MIN_RATIO: 0.25,
   BLUE_BG_MIN_V: 50,
 
-  // ── 白飛び（鏡面反射のスポット）──
-  // 注意: 深さスコアのブレの主因は「白飛びするほど強い反射」ではなく、
-  // 焦げ表面を全体的に明るくする弱い光沢だった。これはソフトでは検出困難なため、
-  // 拡散光による物理的統制で対処する。このガードは強い反射スポットの保険。
+  // ── 白飛び（鏡面反射）──
   BLOWOUT_V: 250,
-  BLOWOUT_MAX_RATIO: 0.02,  // 臓器内の2%まで
+  BLOWOUT_MAX_RATIO: 0.02,
 
-  // ── 影: 臓器内の「低彩度かつ暗い」画素（焦げではない影）の許容割合 ──
+  // ── 影 ──
   SHADOW_V_MAX: 60,
   SHADOW_SAT_MAX: 0.25,
-  SHADOW_MAX_RATIO: 0.05,   // 臓器内の5%まで
+  SHADOW_MAX_RATIO: 0.05,
 
   // ── 位置 ──
   CENTER_TOLERANCE: 0.15,
@@ -792,18 +1095,31 @@ const GUARD = {
 // ============================================================
 //  設定の永続化（2回目以降の入力を省略）
 // ============================================================
+const DEFAULT_SUPA_URL = "https://vuxwmyudoymqcyplyjkl.supabase.co/";
+const DEFAULT_SUPA_KEY = "sb_publishable_vreFxwLz67v5Qp4TvJycAA_J3FtjYzf";
+
 function loadSettings() {
   try {
     const s = JSON.parse(localStorage.getItem("scan_cfg") || "{}");
-    if (s.url) document.getElementById("inUrl").value = s.url;
-    if (s.key) document.getElementById("inKey").value = s.key;
+
+    // 実験時の入力を減らすため、URL / Publishable Key は初期入力済みにする。
+    // 過去に保存した設定があればそちらを優先する。
+    document.getElementById("inUrl").value = s.url || DEFAULT_SUPA_URL;
+    document.getElementById("inKey").value = s.key || DEFAULT_SUPA_KEY;
+
     if (s.subject) document.getElementById("inSubject").value = s.subject;
     if (s.side) setSide(s.side);
     if (typeof s.limitMin === "number") limitMin = s.limitMin;
     if (typeof s.noLimit === "boolean") noLimit = s.noLimit;
     renderLimit();
     checkConnection();
-  } catch(e) {}
+  } catch(e) {
+    // localStorageの内容が壊れていても、実験用の既定値で接続を試す。
+    document.getElementById("inUrl").value = DEFAULT_SUPA_URL;
+    document.getElementById("inKey").value = DEFAULT_SUPA_KEY;
+    renderLimit();
+    checkConnection();
+  }
 }
 
 function saveSettings() {
@@ -881,81 +1197,6 @@ document.getElementById("inUrl").addEventListener("change", checkConnection);
 document.getElementById("inKey").addEventListener("change", checkConnection);
 
 // ============================================================
-//  カメラの停止・戻る
-// ============================================================
-function stopStream(stream) {
-  if (!stream) return;
-  stream.getTracks().forEach(track => track.stop());
-}
-
-function getUnifiedCameraConstraints() {
-  const video = {
-    width: { ideal: 1920 },
-    height: { ideal: 1080 }
-  };
-
-  // 一度選ばれた背面カメラを両方の撮影で再利用し、
-  // 広角・標準レンズが画面ごとに変わるのを防ぐ。
-  if (preferredCameraDeviceId) {
-    video.deviceId = { exact: preferredCameraDeviceId };
-  } else {
-    video.facingMode = { ideal: "environment" };
-  }
-
-  return { video, audio: false };
-}
-
-function rememberCameraDevice(stream) {
-  const track = stream?.getVideoTracks?.()[0];
-  const deviceId = track?.getSettings?.().deviceId;
-  if (deviceId) preferredCameraDeviceId = deviceId;
-}
-
-function stopOrganCamera() {
-  if (loopId) {
-    clearInterval(loopId);
-    loopId = null;
-  }
-  stopStream(videoStream);
-  videoStream = null;
-
-  const video = document.getElementById("video");
-  if (video) video.srcObject = null;
-}
-
-function stopTumorCamera() {
-  stopStream(tumorStream);
-  tumorStream = null;
-
-  const video = document.getElementById("tumorVideo");
-  if (video) video.srcObject = null;
-}
-
-function clearTumorPhoto() {
-  tumorPhotoBlob = null;
-  if (tumorPhotoUrl) {
-    URL.revokeObjectURL(tumorPhotoUrl);
-    tumorPhotoUrl = "";
-  }
-
-  const previewImg = document.getElementById("tumorPreviewImg");
-  previewImg.removeAttribute("src");
-  previewImg.style.display = "none";
-}
-
-function backFromOrganCamera() {
-  stopOrganCamera();
-  stableCount = 0;
-  show("timeInput");
-}
-
-function backFromTumorCamera() {
-  stopTumorCamera();
-  clearTumorPhoto();
-  show("cutfacePrompt");
-}
-
-// ============================================================
 //  カメラ起動
 // ============================================================
 // 「カメラを起動」を押したら、まず所要時間を入力してもらう。
@@ -966,7 +1207,6 @@ function start() {
   saveSettings();
   // 前回の入力をリセット
   tMin = 5; tSec = 0; isTimedOut = false; elapsedSec = null;
-  captureSessionKey = "";
   setSkill("novice");   // 熟練度は毎回 novice から選び直す
   show("timeInput");
   // 画面表示後にドラムを構築（scrollTop は表示後でないと効かない）
@@ -974,20 +1214,17 @@ function start() {
 }
 
 async function startCamera() {
-  stopOrganCamera();
-  stopTumorCamera();
-
   try {
-    videoStream = await navigator.mediaDevices.getUserMedia(
-      getUnifiedCameraConstraints()
-    );
-    rememberCameraDevice(videoStream);
-    const video = document.getElementById("video");
-    video.srcObject = videoStream;
-    await video.play();
-
-    document.getElementById("subjectBadge").textContent =
-      "撮影 1/2・" + subjectId + " (" + selectedSide + ")";
+    videoStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: "environment",
+        width:  { ideal: 1920 },
+        height: { ideal: 1080 }
+      },
+      audio: false
+    });
+    document.getElementById("video").srcObject = videoStream;
+    document.getElementById("subjectBadge").textContent = subjectId + " (" + selectedSide + ")";
     show("scanner");
     stableCount = 0;
     loopId = setInterval(analyzeFrame, 200);
@@ -1021,7 +1258,6 @@ function analyzeFrame() {
 }
 
 function getGuideRectForAnalysis(w, h) {
-  // getCropRect() と同じ基準で、マージンを除いた赤いガイド枠そのものを返す。
   const isPortrait = h > w;
   const frameW = isPortrait ? w : h;
   const frameH = isPortrait ? h : w;
@@ -1044,7 +1280,6 @@ function quickCheck(imageData, w, h) {
   const d = imageData.data;
   const step = 4;
 
-  // 背景判定は臓器から離れた周辺部だけを見る。
   const bandX = w * 0.15, bandY = h * 0.15;
 
   let samples = 0;
@@ -1064,7 +1299,6 @@ function quickCheck(imageData, w, h) {
       const sat = mx === 0 ? 0 : (mx - mn) / mx;
       const v   = mx;
 
-      // ── 臓器候補: 赤〜橙の有彩色 + 暗い焦げ部 ──
       const isReddish = (r > g) && (r >= b);
       const isOrgan =
         (sat > 0.25 && v > 40 && isReddish) ||
@@ -1083,7 +1317,6 @@ function quickCheck(imageData, w, h) {
         if (v < GUARD.SHADOW_V_MAX && sat < GUARD.SHADOW_SAT_MAX) shadowPx++;
       }
 
-      // ── 青背景: 周辺部で青が優勢な画素を数える ──
       const inBorder =
         (x < bandX || x > w - bandX || y < bandY || y > h - bandY);
 
@@ -1103,7 +1336,6 @@ function quickCheck(imageData, w, h) {
   const organRatio = organPx / Math.max(samples, 1);
   const checks = {};
 
-  // ── 1. サイズ: 赤いガイド枠に対する外接矩形の充填率 ──
   if (organRatio < GUARD.ORGAN_RATIO_NONE || organPx <= 20) {
     checks["サイズ"] = { ok: false, msg: "臓器が見えません" };
   } else {
@@ -1135,7 +1367,6 @@ function quickCheck(imageData, w, h) {
     }
   }
 
-  // ── 2. 背景: 白背景ではなく青背景を確認 ──
   const blueRatio = bluePx / Math.max(borderSamples, 1);
   if (blueRatio < GUARD.BLUE_BG_MIN_RATIO) {
     checks["背景"] = {
@@ -1150,7 +1381,6 @@ function quickCheck(imageData, w, h) {
   }
 
   if (organPx > 20) {
-    // ── 3. 白飛び（鏡面反射）──
     const blowRatio = blowoutPx / organPx;
     if (blowRatio > GUARD.BLOWOUT_MAX_RATIO) {
       checks["反射"] = {
@@ -1161,7 +1391,6 @@ function quickCheck(imageData, w, h) {
       checks["反射"] = { ok: true, msg: "反射なし" };
     }
 
-    // ── 4. 影 ──
     const shadowRatio = shadowPx / organPx;
     if (shadowRatio > GUARD.SHADOW_MAX_RATIO) {
       checks["影"] = {
@@ -1172,7 +1401,6 @@ function quickCheck(imageData, w, h) {
       checks["影"] = { ok: true, msg: "影なし" };
     }
 
-    // ── 5. 位置 ──
     const avgX = organXsum / organPx, avgY = organYsum / organPx;
     const offX = Math.abs(avgX - w / 2) / w;
     const offY = Math.abs(avgY - h / 2) / h;
@@ -1267,23 +1495,6 @@ function getCropRect(videoW, videoH) {
 // ============================================================
 //  撮影 → クロップ → Supabaseにアップロード
 // ============================================================
-function createCaptureSessionKey() {
-  const now = new Date();
-  const timestamp =
-    now.getFullYear().toString() +
-    String(now.getMonth() + 1).padStart(2, "0") +
-    String(now.getDate()).padStart(2, "0") + "_" +
-    String(now.getHours()).padStart(2, "0") +
-    String(now.getMinutes()).padStart(2, "0") +
-    String(now.getSeconds()).padStart(2, "0");
-
-  const timeTag = isTimedOut ? "tTO" : `t${elapsedSec}`;
-  const limitSec = getLimitSec();
-  const limitTag = limitSec === null ? "Lno" : `L${limitSec}`;
-
-  return `${subjectId}_${selectedSide}_${selectedSkill}_${timestamp}_${timeTag}_${limitTag}`;
-}
-
 async function capture() {
   if (stableCount < STABLE_NEED) return;
 
@@ -1298,7 +1509,8 @@ async function capture() {
   c.getContext("2d").drawImage(v, 0, 0);
 
   // カメラ停止
-  stopOrganCamera();
+  clearInterval(loopId);
+  videoStream.getTracks().forEach(t => t.stop());
 
   // ガイド枠でクロップ
   const crop = getCropRect(fullW, fullH);
@@ -1317,12 +1529,27 @@ async function capture() {
   // クロップ画像をJPEGに変換
   const blob = await new Promise(r => cropCanvas.toBlob(r, "image/jpeg", 0.92));
 
+  // ファイル名: S001_20260615_143022.jpg
   const now = new Date();
-  if (!captureSessionKey) {
-    captureSessionKey = createCaptureSessionKey();
-  }
-  const recordKey = captureSessionKey;
-  const filename = `${recordKey}_organ.jpg`;
+  const ts = now.getFullYear().toString() +
+    String(now.getMonth()+1).padStart(2,"0") +
+    String(now.getDate()).padStart(2,"0") + "_" +
+    String(now.getHours()).padStart(2,"0") +
+    String(now.getMinutes()).padStart(2,"0") +
+    String(now.getSeconds()).padStart(2,"0");
+  // 所要時間をファイル名に埋め込む。
+  //   _t285 → 285秒で完了 /  _tTO → 時間切れ
+  // PC側(auto_evaluate.py)はこれを読んで時間スコアを計算する。
+  // 時間だけを別送すると画像と対応づける手間が増えるので、
+  // ファイル名に載せてしまうのが確実。
+  const timeTag = isTimedOut ? "tTO" : `t${elapsedSec}`;
+  // 制限時間タグ: L420=制限7分, Lno=制限なし
+  const limitSec = getLimitSec();
+  const limitTag = (limitSec === null) ? "Lno" : `L${limitSec}`;
+  // ファイル名に 側・熟練度・時間・制限時間 を埋め込む。PC側がこれを読んでCSVに記録する。
+  //   例: S001_left_novice_20260714_143022_t285_L420.jpg
+  const recordKey = `${subjectId}_${selectedSide}_${selectedSkill}_${ts}_${timeTag}_${limitTag}`;
+  const filename = `${recordKey}.jpg`;
 
   try {
     // ── 画像をSupabase Storageにアップロード ──
@@ -1350,8 +1577,6 @@ async function capture() {
       subject_id: subjectId,
       timestamp: now.toISOString(),
       filename: filename,
-      record_key: recordKey,
-      capture_type: "organ",
       elapsed_sec: elapsedSec,
       skill_level: selectedSkill,
       timed_out: isTimedOut,
@@ -1377,8 +1602,26 @@ async function capture() {
       }
     );
 
-    // 摘出面だけでは採点を開始せず、同じrecord_keyで割面を撮影する。
-    show("cutfacePrompt");
+    // 成功 → 摘出面はここでは採点結果を待たない。
+    // 割面も撮り終えてから、まとめて6軸の結果を表示する。
+    shotNumber++;
+
+    // 割面採点後にこのキーで結果を取りに行くので保存しておく
+    organRecordKey = recordKey;
+
+    // 撮影した画像をサムネイル表示して、撮影種別選択に戻る
+    const thumb = document.getElementById("organThumb");
+    if (thumb) {
+      thumb.src = URL.createObjectURL(blob);
+      thumb.style.display = "block";
+    }
+    const st = document.getElementById("organStatus");
+    if (st) {
+      st.textContent = "✓ 撮影済み（タップで撮り直し）";
+      st.className = "shoot-status done";
+    }
+    updateShootHint();
+    show("shootSelect");
 
   } catch(e) {
     show("result");
@@ -1408,13 +1651,9 @@ function incrementSubjectId() {
 //  画面切替
 // ============================================================
 function show(id) {
-  // 別画面へ移動した時にカメラが裏で動き続けるのを防ぐ。
-  if (id !== "scanner") stopOrganCamera();
-  if (id !== "tumorCapture") stopTumorCamera();
-
   ["setup", "scanner", "uploading", "result",
    "timeInput", "score", "admin",
-   "tumorCapture", "tumorScore", "shootSelect", "cutfacePrompt"].forEach(s => {
+   "shootSelect"].forEach(s => {
     const el = document.getElementById(s);
     if (el) el.style.display = "none";
   });
@@ -1427,13 +1666,26 @@ function retake() {
   saveSettings();
   stableCount = 0;
   stopPolling();
-  stopOrganCamera();
-  stopTumorCamera();
-  clearTumorPhoto();
-  captureSessionKey = "";
+  resetShootState();
   show("setup");
   document.getElementById("subjectBadge").textContent = subjectId;
   checkConnection();
+}
+
+function resetShootState() {
+  // 次の被験者に移るとき、摘出面／割面の撮影状態をクリアする
+  organRecordKey = null;
+  tumorRecordKey = null;
+  tumorBlob = null;
+  ["organThumb", "tumorThumb"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.style.display = "none"; el.removeAttribute("src"); }
+  });
+  ["organStatus", "tumorStatus"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = ""; el.className = "shoot-status"; }
+  });
+  updateShootHint();
 }
 
 // ============================================================
@@ -1597,276 +1849,12 @@ function confirmTime(timedOut) {
     isTimedOut = true;
     elapsedSec = null;
   }
-  // 同じ被験者について、摘出面→割面の順に2枚撮影する。
-  captureSessionKey = createCaptureSessionKey();
-  startCamera();
+  // 時間確定後、摘出面か割面かを選んでもらう
+  show("shootSelect");
 }
 
 function doStartCamera() { startCamera(); }  // 摘出面
 function doStartTumor()  { startTumor(); }   // 割面
-
-// ============================================================
-//  割面カメラ
-// ============================================================
-function resetTumorCaptureUI() {
-  clearTumorPhoto();
-
-  const video = document.getElementById("tumorVideo");
-  const previewImg = document.getElementById("tumorPreviewImg");
-  const placeholder = document.getElementById("tumorPlaceholder");
-  const captureBtn = document.getElementById("tumorCaptureBtn");
-  const reviewActions = document.getElementById("tumorReviewActions");
-  const guide = document.getElementById("tumorGuide");
-  const crossH = document.getElementById("tumorCrossH");
-  const crossV = document.getElementById("tumorCrossV");
-  const hint = document.getElementById("tumorHint");
-
-  video.style.display = "none";
-  previewImg.style.display = "none";
-  placeholder.style.display = "flex";
-  placeholder.lastElementChild.textContent = "カメラを起動しています...";
-
-  captureBtn.style.display = "flex";
-  captureBtn.onclick = captureTumorPhoto;
-  captureBtn.disabled = true;
-  reviewActions.style.display = "none";
-
-  guide.style.display = "block";
-  crossH.style.display = "block";
-  crossV.style.display = "block";
-  hint.style.display = "block";
-  hint.textContent = "左右端を黄色線の両端に合わせ、断面を正面から撮影";
-}
-
-async function startTumor() {
-  stopOrganCamera();
-  stopTumorCamera();
-  resetTumorCaptureUI();
-  show("tumorCapture");
-
-  const video = document.getElementById("tumorVideo");
-  const placeholder = document.getElementById("tumorPlaceholder");
-  const captureBtn = document.getElementById("tumorCaptureBtn");
-
-  try {
-    if (!navigator.mediaDevices?.getUserMedia) {
-      throw new Error("getUserMedia is not supported");
-    }
-
-    tumorStream = await navigator.mediaDevices.getUserMedia(
-      getUnifiedCameraConstraints()
-    );
-    rememberCameraDevice(tumorStream);
-
-    video.srcObject = tumorStream;
-    await video.play();
-
-    placeholder.style.display = "none";
-    video.style.display = "block";
-    captureBtn.disabled = false;
-  } catch (e) {
-    console.warn("割面カメラを直接起動できませんでした:", e);
-
-    placeholder.style.display = "flex";
-    placeholder.lastElementChild.textContent =
-      "撮影ボタンを押すと端末のカメラが開きます";
-    captureBtn.disabled = false;
-    captureBtn.onclick = openTumorFileCamera;
-  }
-}
-
-function openTumorFileCamera() {
-  document.getElementById("tumorFileInput").click();
-}
-
-function getTumorCropRect(videoW, videoH) {
-  // 割面の理想形は半円なので、保存領域は横:縦=2:1とする。
-  // ガイド枠内を余白なしで保存する。
-  const isPortrait = videoH > videoW;
-  const frameW = isPortrait ? videoW : videoH;
-  const frameH = isPortrait ? videoH : videoW;
-
-  const boxW = frameW * 0.88;
-  const boxH = boxW / 2.0;
-  const cx = frameW / 2;
-  const cy = frameH * 0.58;
-
-  const x = Math.max(0, Math.round(cx - boxW / 2));
-  const y = Math.max(0, Math.round(cy - boxH / 2));
-  const w = Math.min(frameW - x, Math.round(boxW));
-  const h = Math.min(frameH - y, Math.round(boxH));
-
-  if (isPortrait) return { x, y, w, h };
-  return { x: y, y: x, w: h, h: w };
-}
-
-async function captureTumorPhoto() {
-  const video = document.getElementById("tumorVideo");
-
-  // getUserMediaが使えない端末では、従来のファイル入力を使う。
-  if (!tumorStream || video.readyState < 2) {
-    openTumorFileCamera();
-    return;
-  }
-
-  const canvas = document.getElementById("tumorCanvas");
-  const fullWidth = video.videoWidth || 1280;
-  const fullHeight = video.videoHeight || 960;
-
-  const fullCanvas = document.createElement("canvas");
-  fullCanvas.width = fullWidth;
-  fullCanvas.height = fullHeight;
-  fullCanvas.getContext("2d").drawImage(
-    video, 0, 0, fullWidth, fullHeight
-  );
-
-  const crop = getTumorCropRect(fullWidth, fullHeight);
-  canvas.width = crop.w;
-  canvas.height = crop.h;
-  canvas.getContext("2d").drawImage(
-    fullCanvas,
-    crop.x, crop.y, crop.w, crop.h,
-    0, 0, crop.w, crop.h
-  );
-
-  const blob = await new Promise(resolve =>
-    canvas.toBlob(resolve, "image/jpeg", 0.92)
-  );
-  if (!blob) {
-    alert("画像を取得できませんでした。もう一度撮影してください。");
-    return;
-  }
-
-  setTumorPreview(blob);
-}
-
-async function onTumorPhoto(event) {
-  const file = event.target.files?.[0];
-  event.target.value = "";
-  if (!file) return;
-
-  if (!file.type.startsWith("image/")) {
-    alert("画像ファイルを選択してください。");
-    return;
-  }
-
-  try {
-    const bitmap = await createImageBitmap(file);
-    const crop = getTumorCropRect(bitmap.width, bitmap.height);
-    const canvas = document.getElementById("tumorCanvas");
-    canvas.width = crop.w;
-    canvas.height = crop.h;
-    canvas.getContext("2d").drawImage(
-      bitmap,
-      crop.x, crop.y, crop.w, crop.h,
-      0, 0, crop.w, crop.h
-    );
-    bitmap.close();
-
-    const blob = await new Promise(resolve =>
-      canvas.toBlob(resolve, "image/jpeg", 0.92)
-    );
-    if (!blob) throw new Error("画像変換に失敗しました");
-    setTumorPreview(blob);
-  } catch (e) {
-    console.warn("中央クロップに失敗したため元画像を使用します:", e);
-    setTumorPreview(file);
-  }
-}
-
-function setTumorPreview(blob) {
-  stopTumorCamera();
-  clearTumorPhoto();
-
-  tumorPhotoBlob = blob;
-  tumorPhotoUrl = URL.createObjectURL(blob);
-
-  const video = document.getElementById("tumorVideo");
-  const placeholder = document.getElementById("tumorPlaceholder");
-  const previewImg = document.getElementById("tumorPreviewImg");
-  const captureBtn = document.getElementById("tumorCaptureBtn");
-  const reviewActions = document.getElementById("tumorReviewActions");
-  const guide = document.getElementById("tumorGuide");
-  const crossH = document.getElementById("tumorCrossH");
-  const crossV = document.getElementById("tumorCrossV");
-  const hint = document.getElementById("tumorHint");
-
-  video.style.display = "none";
-  placeholder.style.display = "none";
-  previewImg.src = tumorPhotoUrl;
-  previewImg.style.display = "block";
-
-  captureBtn.style.display = "none";
-  reviewActions.style.display = "flex";
-
-  // 保存画像はすでにガイド枠で切り出されているため、
-  // 確認画面では枠や十字線を重ねない。
-  guide.style.display = "none";
-  crossH.style.display = "none";
-  crossV.style.display = "none";
-  hint.style.display = "none";
-}
-
-async function restartTumorCamera() {
-  clearTumorPhoto();
-  await startTumor();
-}
-
-// 割面解析側と混ざらないよう、cutface/フォルダへ保存する。
-// 現時点では画像送信までを担当し、採点処理はPC側の割面解析実装に接続する。
-async function uploadTumor() {
-  if (!tumorPhotoBlob) {
-    alert("先に割面を撮影してください。");
-    return;
-  }
-
-  show("uploading");
-
-  if (!captureSessionKey) {
-    alert("撮影セッションが見つかりません。摘出面から撮り直してください。");
-    show("timeInput");
-    return;
-  }
-
-  const recordKey = captureSessionKey;
-  const filename = `${recordKey}_tumor.jpg`;
-
-  try {
-    const response = await fetch(
-      `${SUPA_URL}/storage/v1/object/${BUCKET}/${filename}`,
-      {
-        method: "POST",
-        headers: {
-          "apikey": SUPA_KEY,
-          "Authorization": `Bearer ${SUPA_KEY}`,
-          "Content-Type": "image/jpeg",
-          "x-upsert": "true"
-        },
-        body: tumorPhotoBlob
-      }
-    );
-
-    if (!response.ok) {
-      const body = await response.text();
-      throw new Error(`${response.status}: ${body}`);
-    }
-
-    clearTumorPhoto();
-    shotNumber++;
-
-    // 2枚が揃ったので統合採点を開始する。
-    incrementSubjectId();
-    startPolling(recordKey);
-  } catch (e) {
-    show("result");
-    document.getElementById("resultTitle").textContent = "エラー";
-    document.getElementById("resultContent").innerHTML =
-      `<div class="err-box">` +
-        `割面画像のアップロードに失敗しました。<br><br>` +
-        `${e.message}` +
-      `</div>`;
-  }
-}
 
 // ============================================================
 //  採点結果の取得（ポーリング）
@@ -1891,6 +1879,16 @@ function startPolling(recordKey) {
 
     const score = await fetchScore(recordKey);
     if (score) {
+      // 割面も撮影済みなら、6軸に統合された結果が来るまで待つ。
+      // PC側は 摘出面採点 → 割面採点 → 統合 の順に処理するため、
+      // 先に4軸の結果が置かれることがある。
+      const needCutFace = !!tumorRecordKey;
+      if (needCutFace && !score.cut_face_enabled && pollCount < POLL_MAX) {
+        note.textContent =
+          `割面の採点を待っています（${pollCount * 3}秒経過）`;
+        pollTimer = setTimeout(tick, POLL_INTERVAL_MS);
+        return;
+      }
       stopPolling();
       renderScore(score, recordKey);
       return;
@@ -1923,14 +1921,14 @@ async function fetchScore(recordKey) {
   }
 }
 
-// 摘出面4軸＋割面2軸の統合評価
+// 評価軸の表示定義（割面2軸は未実装なので N/A 表示）
 const AXES = [
   { key: "residual_tumor_score", name: "残存腫瘍", max: 25, na: false },
   { key: "char_severity_score",  name: "焦げ度合", max: 20, na: false, hasSeverity: true },
   { key: "circularity_score",    name: "円形度",   max: 10, na: false },
   { key: "time_score",           name: "時間",     max: 10, na: false },
-  { key: "smoothness_score",     name: "平滑度",   max: 20, na: false },
-  { key: "balance_score",        name: "バランス", max: 15, na: false },
+  { key: "smoothness_score",     name: "平滑度",   max: 20, na: true  },
+  { key: "balance_score",        name: "バランス", max: 15, na: true  },
 ];
 
 // 軸の内訳を描画する共通関数（結果画面と管理者詳細で共用）
@@ -1938,156 +1936,249 @@ const AXES = [
 function renderAxes(container, score) {
   container.innerHTML = "";
   const cutEnabled = !!score.cut_face_enabled;
+
+  const panel = document.createElement("div");
+  panel.className = "axis-panel";
+
   AXES.forEach(a => {
     const isNA = a.na && !cutEnabled;
-    const pts  = isNA ? 0 : (score[a.key] ?? 0);
-    const pct  = a.max > 0 ? (pts / a.max * 100) : 0;
+    const pts  = isNA ? 0 : Number(score[a.key] ?? 0);
+    const pct  = a.max > 0 ? Math.max(0, Math.min(100, pts / a.max * 100)) : 0;
+
     let fillCls = "";
-    if (!isNA) { if (pct < 30) fillCls = "bad"; else if (pct < 60) fillCls = "low"; }
-    const div = document.createElement("div");
-    div.className = "axis" + (isNA ? " na" : "");
-    // 焦げ度合いの軽度/中度/重度インジケーター
-    let extra = "";
+    if (!isNA) {
+      if (pct < 30) fillCls = "bad";
+      else if (pct < 60) fillCls = "low";
+    }
+
+    const item = document.createElement("div");
+    item.className = "axis-compact" + (isNA ? " na" : "");
+
     if (a.hasSeverity && !isNA) {
-      const sev  = Math.round((score.burn_severe_ratio   ?? 0) * 100);
-      const mod  = Math.round((score.burn_moderate_ratio ?? 0) * 100);
-      const mild = Math.round((score.burn_mild_ratio     ?? 0) * 100);
-      extra =
-        `<div class="sev-bars">` +
-          `<div class="sev-row"><span class="sev-label">重度</span><div class="sev-track"><div class="sev-fill bad"  style="width:${sev}%"></div></div><span class="sev-pct">${sev}%</span></div>` +
-          `<div class="sev-row"><span class="sev-label">中度</span><div class="sev-track"><div class="sev-fill low"  style="width:${mod}%"></div></div><span class="sev-pct">${mod}%</span></div>` +
-          `<div class="sev-row"><span class="sev-label">軽度</span><div class="sev-track"><div class="sev-fill good" style="width:${mild}%"></div></div><span class="sev-pct">${mild}%</span></div>` +
+      const sev  = Math.round(Number(score.burn_severe_ratio   ?? 0) * 100);
+      const mod  = Math.round(Number(score.burn_moderate_ratio ?? 0) * 100);
+      const mild = Math.round(Number(score.burn_mild_ratio     ?? 0) * 100);
+
+      item.innerHTML =
+        `<div class="axis-main-row accordion-trigger" role="button" tabindex="0" aria-expanded="false">` +
+          `<span class="axis-compact-name">${a.name}</span>` +
+          `<div class="axis-mini-track"><div class="axis-mini-fill ${fillCls}" style="width:${pct}%"></div></div>` +
+          `<span class="axis-compact-pts">${pts.toFixed(1)} / ${a.max}</span>` +
+          `<span class="axis-chevron">⌄</span>` +
+        `</div>` +
+        `<div class="severity-accordion">` +
+          `<div class="severity-accordion-inner">` +
+            `<div class="severity-accordion-title">焦げ度合 内訳</div>` +
+            `<div class="sev-bars">` +
+              `<div class="sev-row"><span class="sev-label">重度</span><div class="sev-track"><div class="sev-fill bad" style="width:${sev}%"></div></div><span class="sev-pct">${sev}%</span></div>` +
+              `<div class="sev-row"><span class="sev-label">中度</span><div class="sev-track"><div class="sev-fill low" style="width:${mod}%"></div></div><span class="sev-pct">${mod}%</span></div>` +
+              `<div class="sev-row"><span class="sev-label">軽度</span><div class="sev-track"><div class="sev-fill good" style="width:${mild}%"></div></div><span class="sev-pct">${mild}%</span></div>` +
+            `</div>` +
+          `</div>` +
+        `</div>`;
+
+      const trigger = item.querySelector(".accordion-trigger");
+      const toggle = () => {
+        const open = item.classList.toggle("open");
+        trigger.setAttribute("aria-expanded", open ? "true" : "false");
+      };
+      trigger.addEventListener("click", toggle);
+      trigger.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          toggle();
+        }
+      });
+    } else {
+      item.innerHTML =
+        `<div class="axis-main-row">` +
+          `<span class="axis-compact-name">${a.name}${isNA ? "（未実装）" : ""}</span>` +
+          `<div class="axis-mini-track"><div class="axis-mini-fill ${fillCls}" style="width:${pct}%"></div></div>` +
+          `<span class="axis-compact-pts">${pts.toFixed(1)} / ${a.max}</span>` +
         `</div>`;
     }
-    div.innerHTML =
-      `<div class="axis-top">` +
-        `<span class="axis-name">${a.name}${isNA ? "（未実装）" : ""}</span>` +
-        `<span class="axis-pts">${pts.toFixed(1)} / ${a.max}</span>` +
-      `</div>` +
-      `<div class="axis-bar"><div class="axis-fill ${fillCls}" style="width:${pct}%"></div></div>` +
-      extra;
-    container.appendChild(div);
+
+    panel.appendChild(item);
   });
 
-  // ── 熟練度・所要時間・制限時間の情報パネル ──
-  const info = document.createElement("div");
-  info.className = "info-panel";
-  const rows = [];
-
-  // 熟練度
-  const skillMap = { novice: "初心者 (Novice)", intermediate: "中級者 (Interm.)", expert: "熟練者 (Expert)" };
-  if (score.skill_level && score.skill_level !== "unknown") {
-    rows.push(["熟練度", skillMap[score.skill_level] || score.skill_level]);
-  }
-
-  // 所要時間 / 時間切れ
-  if (score.timed_out) {
-    rows.push(["所要時間", "時間切れ（未完了）"]);
-  } else if (score.elapsed_sec != null) {
-    const m2 = Math.floor(score.elapsed_sec/60), sec = score.elapsed_sec%60;
-    rows.push(["所要時間", `${m2}分${String(sec).padStart(2,"0")}秒`]);
-  }
-
-  // 制限時間
-  if (score.limit_sec === null || score.limit_sec === undefined) {
-    // limit_sec が明示的に null なら「制限なし」、キー自体がなければ表示しない
-    if ("limit_sec" in score) rows.push(["制限時間", "なし"]);
-  } else {
-    const lm = Math.floor(score.limit_sec/60);
-    rows.push(["制限時間", `${lm}分`]);
-  }
-
-  info.innerHTML = rows.map(([k,v]) =>
-    `<div class="info-row"><span class="info-k">${k}</span><span class="info-v">${v}</span></div>`
-  ).join("");
-  if (rows.length) container.appendChild(info);
+  container.appendChild(panel);
 }
 
 // 焦げ段階マスク画像を指定要素に表示する
-function showSeverityImage(imgEl, wrapEl, recordKey) {
-  if (!imgEl || !recordKey) return;
-  const url = `${SUPA_URL}/storage/v1/object/${BUCKET}/results/${recordKey}_severity.png?t=${Date.now()}`;
-  console.log("[severity] loading:", url);
-  imgEl.src = url;
-  imgEl.onload  = () => {
-    console.log("[severity] loaded OK");
-    if (wrapEl) wrapEl.style.display = "block";
-  };
-  imgEl.onerror = () => {
-    console.warn("[severity] FAILED to load:", url);
-    if (wrapEl) wrapEl.style.display = "none";
-    // フォールバック: /object/public/ で試す
-    const pubUrl = `${SUPA_URL}/storage/v1/object/public/${BUCKET}/results/${recordKey}_severity.png?t=${Date.now()}`;
-    console.log("[severity] trying public URL:", pubUrl);
-    imgEl.onerror = () => console.warn("[severity] public URL also failed");
-    imgEl.onload  = () => { console.log("[severity] public URL OK"); if(wrapEl) wrapEl.style.display="block"; };
-    imgEl.src = pubUrl;
-  };
+function _resultObjectUrl(recordKey, suffix) {
+  return `${SUPA_URL}/storage/v1/object/${BUCKET}/results/${recordKey}${suffix}?t=${Date.now()}`;
+}
+function _resultPublicUrl(recordKey, suffix) {
+  return `${SUPA_URL}/storage/v1/object/public/${BUCKET}/results/${recordKey}${suffix}?t=${Date.now()}`;
 }
 
-
-function showCutfaceImage(imgEl, wrapEl, recordKey) {
+function loadResultImage(imgEl, wrapEl, recordKey, suffixes, onLoaded=null) {
   if (!imgEl || !recordKey) return;
+  const candidates = [];
+  suffixes.forEach(suffix => {
+    candidates.push(_resultObjectUrl(recordKey, suffix));
+    candidates.push(_resultPublicUrl(recordKey, suffix));
+  });
 
-  const privateUrl =
-    `${SUPA_URL}/storage/v1/object/${BUCKET}/results/${recordKey}_tumor.png?t=${Date.now()}`;
-  imgEl.src = privateUrl;
-
-  imgEl.onload = () => {
-    if (wrapEl) wrapEl.style.display = "block";
-  };
-  imgEl.onerror = () => {
-    const publicUrl =
-      `${SUPA_URL}/storage/v1/object/public/${BUCKET}/results/${recordKey}_tumor.png?t=${Date.now()}`;
-    imgEl.onerror = () => {
+  let idx = 0;
+  const tryNext = () => {
+    if (idx >= candidates.length) {
       if (wrapEl) wrapEl.style.display = "none";
-    };
+      return;
+    }
+    const url = candidates[idx++];
     imgEl.onload = () => {
       if (wrapEl) wrapEl.style.display = "block";
+      if (onLoaded) onLoaded(imgEl);
     };
-    imgEl.src = publicUrl;
+    imgEl.onerror = tryNext;
+    imgEl.src = url;
   };
+  tryNext();
 }
 
+// backward-compatible helper names used by admin/detail code
+function showSeverityImage(imgEl, wrapEl, recordKey) {
+  loadResultImage(imgEl, wrapEl, recordKey, ["_severity.png"]);
+}
+
+function showTumorVizImage(imgEl, wrapEl, recordKey) {
+  // supports current/older backend names
+  loadResultImage(
+    imgEl,
+    wrapEl,
+    recordKey,
+    ["_cutface.png", "_tumor.png", "_tumorviz.png"]
+  );
+}
+
+function showMarginImage(imgEl, wrapEl, recordKey) {
+  // This file must be uploaded by the PC-side evaluator as results/<recordKey>_margin.png.
+  loadResultImage(imgEl, wrapEl, recordKey, ["_margin.png"]);
+}
+
+function buildMarginFeedback(score) {
+  const side = String(score.side || "").toLowerCase();
+  const sideJa = side === "left" ? "左側" : side === "right" ? "右側" : "評価側";
+  const circ = Number(score.burn_circularity ?? score.circularity ?? NaN);
+  if (!Number.isFinite(circ)) {
+    return `${sideJa}の焦げ領域を評価しました。`;
+  }
+  if (circ >= 0.75) {
+    return `${sideJa}に焦げを認めます。円形度は比較的高く、輪郭はまとまっています。`;
+  }
+  if (circ >= 0.55) {
+    return `${sideJa}に焦げを認めます。円形度は中程度で、輪郭に一部不整が見られます。`;
+  }
+  return `${sideJa}に焦げを認めます。円形度が低く、領域の不整が見られます。`;
+}
+
+function buildSeverityFeedback(score) {
+  const sev = Number(score.burn_severe_ratio ?? 0);
+  const mod = Number(score.burn_moderate_ratio ?? 0);
+  const mild = Number(score.burn_mild_ratio ?? 0);
+  const values = [
+    ["重度", sev],
+    ["中度", mod],
+    ["軽度", mild],
+  ].sort((a,b) => b[1] - a[1]);
+
+  return `焦げ部は重度・中度・軽度に分類され、${values[0][0]}が最も多く検出されています。`;
+}
+
+function renderCutfaceStats(score) {
+  const el = document.getElementById("cutfaceStats");
+  if (!el) return;
+
+  const smooth = Number(score.smoothness_score ?? 0);
+  const meanErr = Number(score.smoothness_mean_error ?? NaN);
+  const p90 = Number(score.smoothness_p90_error ?? NaN);
+  const balance = Number(score.balance_score ?? 0);
+  const ratio = Number(score.balance_ratio ?? NaN);
+  const left = Number(score.left_margin_px ?? NaN);
+  const right = Number(score.right_margin_px ?? NaN);
+
+  const rows = [
+    ["平滑度", `${smooth.toFixed(1)} / 20点`],
+    ["平均誤差", Number.isFinite(meanErr) ? `${(meanErr*100).toFixed(1)}%` : "—"],
+    ["90%tile", Number.isFinite(p90) ? `${(p90*100).toFixed(1)}%` : "—"],
+    ["バランス", `${balance.toFixed(1)} / 15点`],
+    ["左右マージン比", Number.isFinite(ratio) ? ratio.toFixed(3) : "—"],
+    ["左", Number.isFinite(left) ? `${left.toFixed(1)} px` : "—"],
+    ["右", Number.isFinite(right) ? `${right.toFixed(1)} px` : "—"],
+  ];
+
+  const wider = String(score.wider_margin_side ?? "");
+  const advice =
+    wider === "同等" || !wider
+      ? "左右マージンはほぼ同じです。"
+      : `${wider}側のマージンが広く検出されました。`;
+
+  el.innerHTML =
+    rows.map(([k,v]) =>
+      `<div class="cutface-stat-row"><span class="cutface-stat-label">${k}</span><span>${v}</span></div>`
+    ).join("") +
+    `<div class="cutface-legend">` +
+      `緑：割面外輪郭（焦げ含む）<br>` +
+      `青：理想円弧<br>` +
+      `水色：腫瘍輪郭<br>` +
+      `赤：左右マージン` +
+    `</div>` +
+    `<div class="cutface-advice">${advice}</div>`;
+}
 
 function renderScore(s, recordKey) {
   document.getElementById("scoreWait").style.display = "none";
+  document.getElementById("scoreFail").style.display = "none";
   document.getElementById("scoreBody").style.display = "flex";
 
-  // グレード
+  // Grade
   const grade = s.grade || "";
   const badge = document.getElementById("gradeBadge");
   badge.textContent = grade;
   const letter = (grade[0] || "").toLowerCase();
   badge.className = ["s","a","b","c","d"].includes(letter) ? letter : "";
 
-  // 総合点
+  // Total
   document.getElementById("totalScore").innerHTML =
-    `${(s.total_score ?? 0).toFixed(1)}<span class="max">/100</span>`;
+    `${Number(s.total_score ?? 0).toFixed(1)}<span class="max">/100</span>`;
 
+  const cap = Number(s.attainable_points ?? 100);
   const capEl = document.getElementById("scoreCap");
-  capEl.textContent = "";
+  capEl.textContent = cap < 100
+    ? `現在の上限 ${cap}点（割面を撮影すると平滑度・バランスが加算されます）`
+    : "";
 
-  // レーダーチャート
-  const img = document.getElementById("radarImg");
-  img.src = `${SUPA_URL}/storage/v1/object/${BUCKET}/results/${recordKey}_radar.png?t=${Date.now()}`;
-  img.onerror = () => { img.style.display = "none"; };
-  img.style.display = "block";
+  // Radar
+  const radar = document.getElementById("radarImg");
+  loadResultImage(radar, null, recordKey, ["_radar.png"]);
 
-  // 軸ごとの内訳（焦げ度合いの軽度/中度/重度も含む）
+  // Six axes
   renderAxes(document.getElementById("axisList"), s);
 
-  // 割面解析画像
-  showCutfaceImage(
-    document.getElementById("cutfaceVizImg"),
-    document.getElementById("cutfaceVizWrap"),
+  // Detailed results
+  const marginFeedback = document.getElementById("marginFeedback");
+  if (marginFeedback) marginFeedback.textContent = buildMarginFeedback(s);
+
+  const severityFeedback = document.getElementById("severityFeedback");
+  if (severityFeedback) severityFeedback.textContent = buildSeverityFeedback(s);
+
+  showMarginImage(
+    document.getElementById("marginImg"),
+    document.getElementById("marginWrap"),
     recordKey
   );
 
-  // 焦げ段階マスク画像
   showSeverityImage(
     document.getElementById("severityImg"),
     document.getElementById("severityWrap"),
+    recordKey
+  );
+
+  renderCutfaceStats(s);
+  showTumorVizImage(
+    document.getElementById("tumorVizImgMain"),
+    document.getElementById("tumorVizWrapMain"),
     recordKey
   );
 }
@@ -2185,8 +2276,27 @@ function renderAdmin() {
   if (adminTab === "rank") {
     rows.sort((a, b) => (b.total_score ?? 0) - (a.total_score ?? 0));
   } else {
-    // 採点順（record_key に日時が入っているので昇順で採点した順になる）
-    rows.sort((a, b) => (a.record_key || "").localeCompare(b.record_key || ""));
+    // 採点順（新しいものが上）
+    // record_key は "S001_left_novice_20260811_012411_..." の形式で
+    // 被験者IDが先頭にあるため、文字列比較では日時順にならない。
+    // recorded_at（採点日時）で並べ替える。無い場合は
+    // record_key から日時部分（8桁_6桁）を抜き出して使う。
+    const timeOf = (r) => {
+      if (r.recorded_at) {
+        const t = Date.parse(r.recorded_at.replace(" ", "T"));
+        if (!isNaN(t)) return t;
+      }
+      const m = (r.record_key || "").match(/(\d{8})_(\d{6})/);
+      if (m) {
+        const d = m[1], s = m[2];
+        return Date.parse(
+          `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}T` +
+          `${s.slice(0,2)}:${s.slice(2,4)}:${s.slice(4,6)}`
+        ) || 0;
+      }
+      return 0;
+    };
+    rows.sort((a, b) => timeOf(b) - timeOf(a));   // 新しい順
   }
 
   list.innerHTML = "";
@@ -2289,22 +2399,25 @@ async function openDetail(r) {
     const score = res.ok ? await res.json() : null;
     if (score) {
       // 上限説明
-      cap.textContent = "";
+      const attainable = score.attainable_points ?? 100;
+      cap.textContent = attainable < 100
+        ? `現在の上限 ${attainable}点（平滑度・バランスは割面解析の実装待ちのため0点）`
+        : "";
 
       // 軸内訳（焦げ度合いの軽度/中度/重度も含む・共通関数）
       renderAxes(axes, score);
-
-      // 割面解析画像
-      showCutfaceImage(
-        document.getElementById("detailCutface"),
-        document.getElementById("detailCutfaceWrap"),
-        r.record_key
-      );
 
       // 焦げ段階マスク画像
       showSeverityImage(
         document.getElementById("detailSeverity"),
         document.getElementById("detailSeverityWrap"),
+        r.record_key
+      );
+
+      // 割面の解析画像（割面を撮影・採点済みなら表示される）
+      showTumorVizImage(
+        document.getElementById("detailTumorViz"),
+        document.getElementById("detailTumorVizWrap"),
         r.record_key
       );
     } else {
@@ -2317,6 +2430,124 @@ async function openDetail(r) {
 
 function closeDetail() {
   document.getElementById("adminDetail").style.display = "none";
+}
+
+
+// ============================================================
+//  割面撮影フロー
+// ============================================================
+let tumorBlob = null;
+let tumorRecordKey = null;
+// 摘出面のレコードキー。割面を撮り終えたあと、このキーで
+// 6軸に統合された採点結果を取りに行く。
+let organRecordKey = null;
+
+function updateShootHint() {
+  const hint = document.getElementById("shootHint");
+  const btn  = document.getElementById("gradeBtn");
+  const both = !!(organRecordKey && tumorRecordKey);
+  if (hint) {
+    if (both) {
+      hint.textContent = "両方撮影しました。採点できます。";
+    } else if (organRecordKey) {
+      hint.textContent = "次に割面を撮影してください";
+    } else if (tumorRecordKey) {
+      hint.textContent = "次に摘出面を撮影してください";
+    } else {
+      hint.textContent = "摘出面と割面の両方を撮影してください";
+    }
+  }
+  // 両方そろったときだけ「採点する」ボタンを出す
+  if (btn) btn.style.display = both ? "block" : "none";
+}
+
+function startGrading() {
+  // 両方の画像がアップロード済みなので、PC側の採点完了を待つ。
+  // 摘出面のキーで結果を取りに行く（割面スコアはPC側で統合される）。
+  if (!organRecordKey) {
+    alert("先に摘出面を撮影してください");
+    return;
+  }
+  startPolling(organRecordKey);
+}
+
+function startTumor() {
+  // 摘出面と同じく、撮影→そのままアップロード→撮影選択に戻る。
+  // 中間のプレビュー画面は挟まず、カメラを直接起動する。
+  tumorBlob = null;
+  const input = document.getElementById("tumorFileInput");
+  input.value = "";          // 同じ写真を撮り直しても onchange が発火するように
+  input.click();
+}
+
+function onTumorPhoto(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  tumorBlob = file;
+  // 撮影したらそのままアップロードし、撮影選択画面でプレビューを見せる
+  uploadTumor();
+}
+
+async function uploadTumor() {
+  if (!tumorBlob) return;
+  if (!SUPA_URL || !SUPA_KEY) {
+    alert("Supabaseの接続情報を設定してください");
+    show("setup");
+    return;
+  }
+
+  show("uploading");
+
+  // ファイル名末尾を _tumor にすることで、PC側が割面と判別する
+  const now = new Date();
+  const ts = now.getFullYear().toString()
+    + String(now.getMonth()+1).padStart(2,"0")
+    + String(now.getDate()).padStart(2,"0")
+    + "_" + String(now.getHours()).padStart(2,"0")
+    + String(now.getMinutes()).padStart(2,"0")
+    + String(now.getSeconds()).padStart(2,"0");
+  const timeTag = isTimedOut ? "tTO" : `t${elapsedSec}`;
+  const limitSec = getLimitSec();
+  const limitTag = (limitSec === null) ? "Lno" : `L${limitSec}`;
+  tumorRecordKey =
+    `${subjectId}_${selectedSide}_${selectedSkill}_${ts}_${timeTag}_${limitTag}_tumor`;
+  const filename = `${tumorRecordKey}.jpg`;
+
+  try {
+    const res = await fetch(
+      `${SUPA_URL}/storage/v1/object/${BUCKET}/${filename}`,
+      {
+        method: "POST",
+        headers: {
+          "apikey": SUPA_KEY,
+          "Authorization": `Bearer ${SUPA_KEY}`,
+          "Content-Type": "image/jpeg",
+          "x-upsert": "true",
+        },
+        body: tumorBlob,
+      }
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  } catch(e) {
+    show("result");
+    document.getElementById("resultTitle").textContent = "エラー";
+    document.getElementById("resultContent").innerHTML =
+      `<div class="err-box">割面のアップロードに失敗しました。<br><br>${e.message}</div>`;
+    return;
+  }
+
+  // サムネイル表示
+  const thumb = document.getElementById("tumorThumb");
+  thumb.src = URL.createObjectURL(tumorBlob);
+  thumb.style.display = "block";
+  const st = document.getElementById("tumorStatus");
+  st.textContent = "✓ 撮影済み（タップで撮り直し）";
+  st.className = "shoot-status done";
+  updateShootHint();
+
+  // 割面もプレビューを見せるため、いったん撮影選択画面に戻る。
+  // 採点は「採点する」ボタンを押したタイミングで開始する。
+  show("shootSelect");
 }
 
 // ============================================================
