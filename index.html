@@ -254,11 +254,11 @@ button{font-family:inherit}
 
   <div class="field">
     <label>Supabase URL</label>
-    <input id="inUrl" type="url" placeholder="https://xxxxx.supabase.co" autocomplete="off">
+    <input id="inUrl" type="url" placeholder="https://xxxxx.supabase.co" value="https://vuxwmyudoymqcyplyjkl.supabase.co/" autocomplete="off">
   </div>
   <div class="field">
     <label>Publishable Key</label>
-    <input id="inKey" type="text" placeholder="sb_publishable_..." autocomplete="off">
+    <input id="inKey" type="text" placeholder="sb_publishable_..." value="sb_publishable_vreFxwLz67v5Qp4TvJycAA_J3FtjYzf" autocomplete="off">
   </div>
   <div class="field">
     <label>被験者ID</label>
@@ -526,18 +526,31 @@ const GUARD = {
 // ============================================================
 //  設定の永続化（2回目以降の入力を省略）
 // ============================================================
+const DEFAULT_SUPA_URL = "https://vuxwmyudoymqcyplyjkl.supabase.co/";
+const DEFAULT_SUPA_KEY = "sb_publishable_vreFxwLz67v5Qp4TvJycAA_J3FtjYzf";
+
 function loadSettings() {
   try {
     const s = JSON.parse(localStorage.getItem("scan_cfg") || "{}");
-    if (s.url) document.getElementById("inUrl").value = s.url;
-    if (s.key) document.getElementById("inKey").value = s.key;
+
+    // 実験時の入力を減らすため、URL / Publishable Key は初期入力済みにする。
+    // 過去に保存した設定があればそちらを優先する。
+    document.getElementById("inUrl").value = s.url || DEFAULT_SUPA_URL;
+    document.getElementById("inKey").value = s.key || DEFAULT_SUPA_KEY;
+
     if (s.subject) document.getElementById("inSubject").value = s.subject;
     if (s.side) setSide(s.side);
     if (typeof s.limitMin === "number") limitMin = s.limitMin;
     if (typeof s.noLimit === "boolean") noLimit = s.noLimit;
     renderLimit();
     checkConnection();
-  } catch(e) {}
+  } catch(e) {
+    // localStorageの内容が壊れていても、実験用の既定値で接続を試す。
+    document.getElementById("inUrl").value = DEFAULT_SUPA_URL;
+    document.getElementById("inKey").value = DEFAULT_SUPA_KEY;
+    renderLimit();
+    checkConnection();
+  }
 }
 
 function saveSettings() {
