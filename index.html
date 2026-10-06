@@ -149,7 +149,7 @@ button{font-family:inherit}
 #totalScore{font-size:48px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
 #totalScore .max{font-size:20px;font-weight:500;color:#666}
 #scoreCap{font-size:11px;color:#666;line-height:1.5}
-#radarImg{width:100%;border-radius:12px;background:#fff}
+#radarImg{width:100%;border-radius:12px;background:#fff;transform:rotate(-90deg);transform-origin:center center}
 #axisList{display:flex;flex-direction:column;gap:8px}
 .axis{background:#1c1c1e;border:1px solid #2c2c2e;border-radius:11px;padding:10px 12px}
 .axis.na{opacity:0.45}
@@ -295,6 +295,8 @@ button{font-family:inherit}
   border-radius:0;
   background:transparent;
   display:block;
+  transform:rotate(-90deg);
+  transform-origin:center center;
 }
 #axisList{ display:block; }
 .axis-panel{
@@ -413,7 +415,10 @@ button{font-family:inherit}
     grid-template-columns:minmax(0,0.9fr) minmax(150px,1.1fr);
   }
   #totalScore{ font-size:38px; }
-  #radarImg{ max-width:220px; }
+  #radarImg{ max-width:220px;
+  transform:rotate(-90deg);
+  transform-origin:center center;
+}
   .axis-main-row{
     grid-template-columns:74px minmax(0,1fr) 58px 16px;
     gap:6px;
@@ -487,6 +492,8 @@ button{font-family:inherit}
   object-fit:contain;
   border-radius:0;
   background:transparent;
+  transform:rotate(-90deg);
+  transform-origin:center center;
 }
 
 /* one compact panel */
@@ -760,7 +767,10 @@ button{font-family:inherit}
     min-height:160px;
   }
   #totalScore{font-size:38px}
-  #radarImg{max-width:220px}
+  #radarImg{max-width:220px
+  transform:rotate(-90deg);
+  transform-origin:center center;
+}
   .axis-main-row{
     grid-template-columns:72px minmax(0,1fr) 56px;
     gap:6px;
@@ -972,7 +982,7 @@ button{font-family:inherit}
       </div>
 
       <div id="tumorVizWrapMain" class="analysis-card cutface-card" style="display:none">
-        <div class="analysis-title">腫瘍割面の評価</div>
+        <div class="analysis-title">割面の評価</div>
         <div class="cutface-layout">
           <div class="cutface-img-window">
             <img id="tumorVizImgMain" class="cutface-img" alt="割面解析">
@@ -2033,7 +2043,7 @@ function loadResultImage(imgEl, wrapEl, recordKey, suffixes, onLoaded=null) {
   let idx = 0;
   const tryNext = () => {
     if (idx >= candidates.length) {
-      if (wrapEl) wrapEl.style.display = "none";
+      if (wrapEl && wrapEl.dataset.optionalImage !== "true") wrapEl.style.display = "none";
       return;
     }
     const url = candidates[idx++];
@@ -2058,7 +2068,7 @@ function showTumorVizImage(imgEl, wrapEl, recordKey) {
     imgEl,
     wrapEl,
     recordKey,
-    ["_cutface.png", "_tumor.png", "_tumorviz.png"]
+    ["_cutface.png", "_tumor.png", "_tumorviz.png", "_tumor_viz.png"]
   );
 }
 
@@ -2186,9 +2196,13 @@ function renderScore(s, recordKey) {
   );
 
   renderCutfaceStats(s);
+  const hasCutfaceDetail = Boolean(s.cut_face_enabled) || ["smoothness_score","balance_score","smoothness_mean_error","smoothness_p90_error","left_margin_px","right_margin_px"].some(k => s[k] !== undefined && s[k] !== null);
+  const cutfaceWrap = document.getElementById("tumorVizWrapMain");
+  if (cutfaceWrap) cutfaceWrap.style.display = hasCutfaceDetail ? "block" : "none";
+  if (cutfaceWrap) cutfaceWrap.dataset.optionalImage = "true";
   showTumorVizImage(
     document.getElementById("tumorVizImgMain"),
-    document.getElementById("tumorVizWrapMain"),
+    cutfaceWrap,
     recordKey
   );
 }
