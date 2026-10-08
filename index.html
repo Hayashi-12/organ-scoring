@@ -993,8 +993,8 @@ button{font-family:inherit}
     </section>
 
     <div class="btn-row result-actions">
-      <button class="next-btn" onclick="retake()">次の被験者へ <span>›</span></button>
-      <button class="ghost home-btn" onclick="show('setup')">ホームに戻る</button>
+      <button id="scorePrimaryBtn" class="next-btn" onclick="retake()">次の被験者へ <span>›</span></button>
+      <button id="scoreHomeBtn" class="ghost home-btn" onclick="show('setup')">ホームに戻る</button>
     </div>
   </div>
 
@@ -1648,7 +1648,7 @@ function incrementSubjectId() {
 // ============================================================
 function show(id) {
   ["setup", "scanner", "uploading", "result",
-   "timeInput", "score", "admin",
+   "timeInput", "score", "admin", "adminDetail",
    "shootSelect"].forEach(s => {
     const el = document.getElementById(s);
     if (el) el.style.display = "none";
@@ -1659,6 +1659,7 @@ function show(id) {
 }
 
 function retake() {
+  scoreViewMode = "capture";
   saveSettings();
   stableCount = 0;
   stopPolling();
@@ -2147,7 +2148,35 @@ function renderCutfaceStats(score) {
     `<div class="cutface-advice">${advice}</div>`;
 }
 
+let scoreViewMode = "capture";
+
+function configureScoreActions() {
+  const primary = document.getElementById("scorePrimaryBtn");
+  const home = document.getElementById("scoreHomeBtn");
+  if (!primary || !home) return;
+
+  if (scoreViewMode === "admin") {
+    primary.innerHTML = "← 採点結果一覧に戻る";
+    primary.onclick = () => {
+      scoreViewMode = "capture";
+      show("admin");
+      renderAdmin();
+    };
+    home.textContent = "ホームに戻る";
+    home.onclick = () => {
+      scoreViewMode = "capture";
+      show("setup");
+    };
+  } else {
+    primary.innerHTML = "次の被験者へ <span>›</span>";
+    primary.onclick = retake;
+    home.textContent = "ホームに戻る";
+    home.onclick = () => show("setup");
+  }
+}
+
 function renderScore(s, recordKey) {
+  configureScoreActions();
   document.getElementById("scoreWait").style.display = "none";
   document.getElementById("scoreFail").style.display = "none";
   document.getElementById("scoreBody").style.display = "flex";
@@ -2381,79 +2410,23 @@ function setSide(side) {
 //  管理者モード 詳細パネル
 // ============================================================
 async function openDetail(r) {
-  const panel = document.getElementById("adminDetail");
-  panel.style.display = "block";
-  panel.scrollTop = 0;
-
-  // グレードバッジ
-  const grade = r.grade || "";
-  const gb = document.getElementById("detailGrade");
-  gb.textContent = grade;
-  gb.className = "detail-grade " + (["S","A","B","C","D"].includes(grade[0]) ? grade[0].toLowerCase() : "");
-
-  // 総合点
-  document.getElementById("detailScore").innerHTML =
-    `${(r.total_score ?? 0).toFixed(1)}<span class="max">/100</span>`;
-
-  // タイトル（被験者ID＋日時）
-  let titleTxt = r.subject_id ?? "—";
-  if (r.recorded_at) titleTxt += "  " + r.recorded_at.slice(5, 16);
-  document.getElementById("detailTitle").textContent = titleTxt;
-
-  // レーダー
-  const radar = document.getElementById("detailRadar");
-  radar.style.display = "none";
-  if (r.record_key) {
-    radar.src = `${SUPA_URL}/storage/v1/object/${BUCKET}/results/${r.record_key}_radar.png?t=${Date.now()}`;
-    radar.onload  = () => { radar.style.display = "block"; };
-    radar.onerror = () => { radar.style.display = "none"; };
+  // 採点順・ランキングのどちらから開いても、撮影直後と同じ結果画面を使う。
+  if (!r || !r.record_key) {
+    alert("この結果の record_key が見つかりません");
+    return;
   }
 
-  // 軸の詳細 — まず一覧データで仮表示してから、JSONが取れたら更新
-  const axes = document.getElementById("detailAxes");
-  const cap  = document.getElementById("detailCap");
-  axes.innerHTML = "<div style='color:#888;font-size:13px'>詳細を読み込み中...</div>";
-  cap.textContent = "";
+  scoreViewMode = "admin";
+  show("score");
 
-  try {
-    const res = await fetch(
-      `${SUPA_URL}/storage/v1/object/${BUCKET}/results/${r.record_key}.json?t=${Date.now()}`,
-      { headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}` } }
-    );
-    const score = res.ok ? await res.json() : null;
-    if (score) {
-      // 上限説明
-      const attainable = score.attainable_points ?? 100;
-      cap.textContent = attainable < 100
-        ? `現在の上限 ${attainable}点（平滑度・バランスは割面解析の実装待ちのため0点）`
-        : "";
-
-      // 軸内訳（焦げ度合いの軽度/中度/重度も含む・共通関数）
-      renderAxes(axes, score);
-
-      // 焦げ段階マスク画像
-      showSeverityImage(
-        document.getElementById("detailSeverity"),
-        document.getElementById("detailSeverityWrap"),
-        r.record_key
-      );
-
-      // 割面の解析画像（割面を撮影・採点済みなら表示される）
-      showTumorVizImage(
-        document.getElementById("detailTumorViz"),
-        document.getElementById("detailTumorVizWrap"),
-        r.record_key
-      );
-    } else {
-      axes.innerHTML = "<div style='color:#888;font-size:13px'>詳細データが見つかりません（採点結果のJSONがまだアップロードされていない可能性があります）</div>";
-    }
-  } catch(e) {
-    axes.innerHTML = `<div style='color:#ff6b6b;font-size:13px'>取得エラー: ${e.message}</div>`;
-  }
+  // 一覧読み込み時点で取得済みのJSONを、そのまま撮影直後と同じ描画関数へ渡す。
+  renderScore(r, r.record_key);
 }
 
 function closeDetail() {
-  document.getElementById("adminDetail").style.display = "none";
+  scoreViewMode = "capture";
+  show("admin");
+  renderAdmin();
 }
 
 
@@ -2488,6 +2461,7 @@ function updateShootHint() {
 }
 
 function startGrading() {
+  scoreViewMode = "capture";
   // 両方の画像がアップロード済みなので、PC側の採点完了を待つ。
   // 摘出面のキーで結果を取りに行く（割面スコアはPC側で統合される）。
   if (!organRecordKey) {
