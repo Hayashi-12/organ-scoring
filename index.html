@@ -1063,7 +1063,7 @@ button{font-family:inherit}
 let SUPA_URL = "https://vuxwmyudoymqcyplyjkl.supabase.co", SUPA_KEY = "sb_publishable_vreFxwLz67v5Qp4TvJycAA_J3FtjYzf", BUCKET = "scans";
 let subjectId = "", videoStream = null, loopId = null;
 let stableCount = 0, shotNumber = 0;
-const STABLE_NEED = 18; // 約3.6秒（200ms × 18）
+const STABLE_NEED = 1; // 待機なし（200msごとの判定1回で撮影可能）
 
 // ============================================================
 //  撮影ガード閾値
@@ -2444,30 +2444,61 @@ let organRecordKey = null;
 function updateShootHint() {
   const hint = document.getElementById("shootHint");
   const btn  = document.getElementById("gradeBtn");
-  const both = !!(organRecordKey && tumorRecordKey);
+
+  const hasOrgan = !!organRecordKey;
+  const hasTumor = !!tumorRecordKey;
+  const both = hasOrgan && hasTumor;
+
+  // 通常は両方必要。時間切れの場合のみ摘出面だけで採点可能。
+  const canGrade = both || (isTimedOut && hasOrgan);
+
   if (hint) {
     if (both) {
       hint.textContent = "両方撮影しました。採点できます。";
-    } else if (organRecordKey) {
+    } else if (isTimedOut && hasOrgan) {
+      hint.textContent = "時間切れのため、割面を撮影せずこのまま採点できます。";
+    } else if (hasOrgan) {
       hint.textContent = "次に割面を撮影してください";
-    } else if (tumorRecordKey) {
+    } else if (hasTumor) {
       hint.textContent = "次に摘出面を撮影してください";
+    } else if (isTimedOut) {
+      hint.textContent = "摘出面を撮影してください。割面は撮影しなくても採点できます。";
     } else {
       hint.textContent = "摘出面と割面の両方を撮影してください";
     }
   }
-  // 両方そろったときだけ「採点する」ボタンを出す
-  if (btn) btn.style.display = both ? "block" : "none";
+
+  if (btn) {
+    btn.style.display = canGrade ? "block" : "none";
+    btn.textContent = (isTimedOut && hasOrgan && !hasTumor)
+      ? "割面なしで採点する"
+      : "採点する";
+  }
 }
 
 function startGrading() {
   scoreViewMode = "capture";
-  // 両方の画像がアップロード済みなので、PC側の採点完了を待つ。
-  // 摘出面のキーで結果を取りに行く（割面スコアはPC側で統合される）。
+
   if (!organRecordKey) {
     alert("先に摘出面を撮影してください");
     return;
   }
+
+  // 通常時は割面必須。時間切れの場合のみ割面なしを許可する。
+  if (!isTimedOut && !tumorRecordKey) {
+    alert("割面を撮影してください");
+    return;
+  }
+
+  if (isTimedOut && !tumorRecordKey) {
+    const ok = confirm(
+      "割面を撮影せずに採点します。\n" +
+      "平滑度とバランスは0点になります。\n\n" +
+      "採点を開始しますか？"
+    );
+    if (!ok) return;
+  }
+
   startPolling(organRecordKey);
 }
 
