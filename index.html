@@ -883,7 +883,7 @@ button{font-family:inherit}
       <div id="stabTrack"><div id="stabFill"></div></div>
     </div>
 
-    <button id="captureBtn" class="off" onclick="capture()">
+    <button id="captureBtn" class="" onclick="capture()">
       <div id="captureInner"></div>
     </button>
   </div>
@@ -1458,7 +1458,7 @@ function updateUI(checks) {
 
   // 撮影ボタンの有効化
   const ready = stableCount >= STABLE_NEED;
-  document.getElementById("captureBtn").className = ready ? "" : "off";
+  document.getElementById("captureBtn").className = "";
   document.getElementById("stabLabel").textContent =
     ready ? "✓ 準備完了 — ボタンを押して撮影" :
     allOk ? "そのままキープしてください..." :
@@ -1506,8 +1506,6 @@ function getCropRect(videoW, videoH) {
 //  撮影 → クロップ → Supabaseにアップロード
 // ============================================================
 async function capture() {
-  if (stableCount < STABLE_NEED) return;
-
   const v = document.getElementById("video");
   const c = document.getElementById("canvas");
 
