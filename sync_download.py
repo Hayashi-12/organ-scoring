@@ -1,8 +1,9 @@
 """
 sync_download.py  —  Windows PCで起動する同期スクリプト
 
-Supabaseに新しい画像がアップロードされると自動でダウンロードし、
-analyze_burn.py を実行して解析結果を保存する。
+Supabaseに新しい画像がアップロードされると自動で received_images/ にダウンロードする。
+採点はこのスクリプトでは行わない（auto_evaluate.py が受信フォルダを監視して採点する）。
+通常は auto_evaluate.py が子プロセスとして自動起動するので、単独で起動する必要はない。
 
 使い方:
     python sync_download.py           ← 常時監視モード
@@ -13,9 +14,7 @@ import json
 import time
 import urllib.request
 import urllib.error
-import os
 import sys
-import subprocess
 from pathlib import Path
 from datetime import datetime
 
@@ -126,12 +125,9 @@ class SyncManager:
             config.get("bucket_name", "scans")
         )
         self.download_dir  = Path(config.get("download_dir", "received_images"))
-        self.output_dir    = Path(config.get("output_dir", "output"))
         self.poll_interval = config.get("poll_interval_sec", 5)
-        self.analyze_script = Path(__file__).parent / "analyze_burn.py"
 
         self.download_dir.mkdir(exist_ok=True)
-        self.output_dir.mkdir(exist_ok=True)
 
         # ダウンロード履歴（同じファイルを2回DLしない）
         self.downloaded = set()
@@ -154,8 +150,7 @@ class SyncManager:
 
     def sync_once(self):
         """
-        1回の同期：
-        新しい画像をダウンロード → analyze_burn.py を自動実行
+        1回の同期：新しい画像をダウンロードする（採点は auto_evaluate.py が行う）
         """
         files = self.storage.list_files()
         new_images = []
@@ -180,55 +175,7 @@ class SyncManager:
                 new_images.append((name, save_path))
                 print(f"  ✓ 保存完了: {save_path}")
 
-        # 新しい画像を解析
-        for name, path in new_images:
-            self._run_analysis(name, path)
-
         return len(new_images)
-
-    def _run_analysis(self, name, image_path):
-        """analyze_burn.py を使って画像を解析"""
-        if not self.analyze_script.exists():
-            print(f"  [情報] analyze_burn.py が見つかりません。")
-            print(f"  　画像は {image_path} に保存済みです。")
-            print(f"  　analyze_burn.py を同じフォルダに置くと自動解析されます。")
-            return
-
-        print(f"  [解析] {name}...")
-
-        # 環境変数でパスを渡す
-        env = os.environ.copy()
-        env["SCAN_IMAGE_PATH"]  = str(image_path.resolve())
-        env["SCAN_OUTPUT_DIR"]  = str(self.output_dir.resolve())
-        env["SCAN_SUBJECT_ID"]  = name.split("_")[0] if "_" in name else "unknown"
-
-        try:
-            result = subprocess.run(
-                [sys.executable, str(self.analyze_script)],
-                env=env,
-                capture_output=True,
-                text=True,
-                timeout=120,
-                cwd=str(self.analyze_script.parent)
-            )
-
-            if result.returncode == 0:
-                print(f"  ✓ 解析完了: {name}")
-                # 出力の最後の数行を表示
-                if result.stdout:
-                    lines = result.stdout.strip().split("\n")
-                    for line in lines[-6:]:
-                        print(f"    {line}")
-            else:
-                print(f"  ✗ 解析エラー: {name}")
-                if result.stderr:
-                    for line in result.stderr.strip().split("\n")[-4:]:
-                        print(f"    {line}")
-
-        except subprocess.TimeoutExpired:
-            print(f"  ✗ タイムアウト: {name} （120秒超過）")
-        except Exception as e:
-            print(f"  ✗ 実行エラー: {e}")
 
     def watch(self):
         """ポーリングで新しい画像を監視し続ける"""
@@ -237,14 +184,9 @@ class SyncManager:
         print("  Supabase 画像同期 -- 監視開始")
         print("=" * 56)
         print(f"  ダウンロード先   : {self.download_dir.resolve()}")
-        print(f"  解析結果         : {self.output_dir.resolve()}")
         print(f"  チェック間隔     : {self.poll_interval}秒")
         print(f"  ダウンロード済み : {len(self.downloaded)}件")
-
-        if self.analyze_script.exists():
-            print(f"  解析スクリプト   : {self.analyze_script}")
-        else:
-            print(f"  [!] analyze_burn.py が見つかりません（画像保存のみ）")
+        print(f"  ※採点は auto_evaluate.py が行います")
 
         print()
         print("  iPhoneから撮影すると自動でここに届きます。")
@@ -260,7 +202,7 @@ class SyncManager:
                     n = self.sync_once()
                     if n > 0:
                         ts = datetime.now().strftime("%H:%M:%S")
-                        print(f"\n  [{ts}] {n}件の新しい画像を処理しました\n")
+                        print(f"\n  [{ts}] {n}件の新しい画像を受信しました\n")
                         dot_count = 0
                     else:
                         # 監視中を示すドット表示

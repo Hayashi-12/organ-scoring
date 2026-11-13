@@ -1856,7 +1856,7 @@ function confirmTime(timedOut) {
 
   // 制限時間ありで、時間切れでないのに制限を超えている → 入力ミスか確認
   if (!timedOut && limitSec !== null && elapsedSec > limitSec) {
-    if (!confirm(`制限時間(${limitMin}分)を超えています。\n時間切れ（時間スコア一律5点）として記録しますか?`)) {
+    if (!confirm(`制限時間(${limitMin}分)を超えています。\n時間切れ（時間スコア0点）として記録しますか?`)) {
       return;   // 入力し直してもらう
     }
     isTimedOut = true;
